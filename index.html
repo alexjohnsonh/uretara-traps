@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f5c3a">
+<title>AT220 Trap Service</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{--bg:#f4f6f3;--card:#fff;--ink:#1c2420;--mute:#5d6a62;--line:#dfe5e0;--brand:#1f5c3a;--brand2:#2f7d52;--ok:#2f8f4e;--warn:#c47a12;--bad:#b83a2e;--chip:#e8efe9}
+@media (prefers-color-scheme:dark){:root{--bg:#121714;--card:#1b221e;--ink:#e6ece8;--mute:#9aa8a0;--line:#2c3630;--brand:#4fae78;--brand2:#3c9566;--chip:#24302a}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+header{position:sticky;top:0;z-index:5;background:var(--brand);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
+header h1{font-size:17px;margin:0;flex:1;font-weight:650}
+header small{opacity:.8;font-size:12px;display:block;font-weight:400}
+header .round{background:rgba(255,255,255,.16);border:0;color:#fff;border-radius:8px;padding:6px 10px;font-size:13px}
+main{padding:12px 16px calc(84px + env(safe-area-inset-bottom));max-width:760px;margin:0 auto}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:6;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;color:var(--mute);padding:8px 2px 9px;font-size:11.5px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button svg{width:24px;height:24px}
+nav button.on{color:var(--brand)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 12px}
+.card h2{font-size:16px;margin:0 0 8px}
+h3{font-size:15px;margin:14px 0 6px}
+.mute{color:var(--mute)}.sm{font-size:13px}
+.row{display:flex;gap:10px;align-items:center}
+.grow{flex:1;min-width:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:11px 14px;font-size:15px;font-weight:550;text-decoration:none;cursor:pointer}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.full{width:100%}
+.btn.sm{padding:7px 10px;font-size:13px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.list{list-style:none;margin:0;padding:0}
+.item{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:8px;cursor:pointer}
+.num{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:var(--chip);flex:none}
+.num.done{background:var(--ok);color:#fff}
+.pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--chip);color:var(--mute)}
+.pill.ok{background:#dcefe2;color:#1e6b39}.pill.warn{background:#f7e7cc;color:#8a5408}.pill.bad{background:#f5d9d5;color:#8e2a20}
+@media (prefers-color-scheme:dark){.pill.ok{background:#1f3b29;color:#8fd6a6}.pill.warn{background:#3d2f17;color:#f0c27a}.pill.bad{background:#3e211d;color:#f0a59b}}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+textarea{min-height:80px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:99px;padding:8px 12px;font-size:14px}
+.seg button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper button{width:48px;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-size:24px;color:var(--ink)}
+.stepper input{text-align:center;font-size:22px;font-weight:700}
+.prog{display:flex;gap:4px;margin:4px 0 12px}
+.prog i{flex:1;height:5px;border-radius:3px;background:var(--line)}
+.prog i.on{background:var(--brand)}
+.tag{display:inline-block;font-size:11.5px;font-weight:650;line-height:1.3;padding:1px 7px;border-radius:6px;margin:0 6px 2px 0;vertical-align:1px;white-space:nowrap}
+.t-trap{background:#f7e7cc;color:#7a4a06}.t-nzat{background:#dbe7fb;color:#1d4b8f}.t-phone{background:#e9e3f7;color:#4e3a86}.t-guide{background:#dcefe2;color:#1e6b39}
+@media (prefers-color-scheme:dark){.t-trap{background:#3d2f17;color:#f0c27a}.t-nzat{background:#1c2c45;color:#a9c6f5}.t-phone{background:#2c2540;color:#c9b8f2}.t-guide{background:#1f3b29;color:#8fd6a6}}
+.tip{background:var(--chip);border-radius:10px;padding:10px 12px;font-size:14px;margin:8px 0}
+.warnbox{background:#fbeee9;border:1px solid #efc7bd;color:#7b2a1e;border-radius:10px;padding:10px 12px;font-size:14px;margin:8px 0}
+@media (prefers-color-scheme:dark){.warnbox{background:#3a201b;border-color:#5d332b;color:#f4c0b6}}
+ol.steps{padding-left:22px;margin:6px 0}ol.steps li{margin:6px 0}
+.compass{width:220px;height:220px;margin:6px auto;display:block}
+.big{font-size:30px;font-weight:750}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.kpi{background:var(--bg);border-radius:10px;padding:10px}
+.kpi b{display:block;font-size:22px}
+.kpi span{font-size:12px;color:var(--mute)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border:1px solid var(--line);padding:5px 6px;text-align:left;white-space:nowrap}
+th{background:var(--chip)}
+td.c,th.c{text-align:center}
+.photos{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.photos img{width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.diagram{width:100%;max-width:340px;display:block;margin:6px auto}
+.hide{display:none!important}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;opacity:0;transition:.25s;pointer-events:none}
+.toast.on{opacity:1}
+#mapsvg{width:100%;height:auto;background:var(--bg);border-radius:10px;touch-action:manipulation}
+@media print{
+  header,nav,.noprint{display:none!important}
+  body,html{background:#fff;color:#000}
+  main{padding:0;max-width:none}
+  .card{border:0;padding:0}
+  th{background:#e8efe9!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #view>*:not(#reportOut){display:none!important}
+}
+</style>
+</head>
+<body>
+<header>
+  <svg width="28" height="28" viewBox="0 0 512 512"><rect x="176" y="96" width="160" height="300" rx="28" fill="#fff"/><circle cx="256" cy="170" r="26" fill="#3fb36b"/></svg>
+  <h1>AT220 Trap Service<small id="siteName">Uretara Island</small></h1>
+  <button class="round" id="roundBtn">Round</button>
+</header>
+<main id="view"></main>
+<nav id="nav">
+  <button data-v="traps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Traps</button>
+  <button data-v="map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Map</button>
+  <button data-v="service"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Service</button>
+  <button data-v="guides"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5V21h16"/></svg>Guides</button>
+  <button data-v="report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Report</button>
+</nav>
+<div class="toast" id="toast"></div>
+<input type="file" id="fileIn" class="hide">
+<script src="xlsx.full.min.js"></script>
+<script>
+"use strict";
+/* ---------- Seed data: Uretara Island AT220 traps (Oct 2026 service results + New Traps.kmz) ---------- */
+const SEED={"traps":[{"id":"1","lat":-38.00433,"lng":177.122382,"notes":"","src":"xlsx"},{"id":"2","lat":-38.004015,"lng":177.120488,"notes":"","src":"xlsx"},{"id":"3","lat":-38.005464,"lng":177.113575,"notes":"","src":"xlsx"},{"id":"4","lat":-38.005191,"lng":177.113417,"notes":"","src":"xlsx"},{"id":"5","lat":-38.004995,"lng":177.11322,"notes":"","src":"xlsx"},{"id":"6","lat":-38.00477,"lng":177.113046,"notes":"","src":"xlsx"},{"id":"7","lat":-38.004461,"lng":177.112933,"notes":"","src":"xlsx"},{"id":"8","lat":-38.005899,"lng":177.114192,"notes":"","src":"xlsx"},{"id":"9","lat":-38.002629,"lng":177.123634,"notes":"","src":"xlsx"},{"id":"10","lat":-38.003756,"lng":177.122333,"notes":"","src":"xlsx"},{"id":"11","lat":-37.997127,"lng":177.116541,"notes":"","src":"xlsx"},{"id":"12","lat":-37.997974,"lng":177.117164,"notes":"","src":"xlsx"},{"id":"13","lat":-38.00263,"lng":177.121682,"notes":"","src":"xlsx"},{"id":"14","lat":-38.001048,"lng":177.119584,"notes":"","src":"xlsx"},{"id":"15","lat":-38.002864,"lng":177.114284,"notes":"","src":"xlsx"},{"id":"16","lat":-38.000217,"lng":177.125097,"notes":"","src":"xlsx"},{"id":"17","lat":-37.997076,"lng":177.123614,"notes":"","src":"xlsx"},{"id":"18","lat":-38.001897,"lng":177.123158,"notes":"","src":"xlsx"},{"id":"19","lat":-38.000853,"lng":177.122035,"notes":"","src":"xlsx"},{"id":"20","lat":-38.003454,"lng":177.121805,"notes":"","src":"xlsx"},{"id":"21","lat":-37.99975,"lng":177.120167,"notes":"","src":"xlsx"},{"id":"22","lat":-37.998417,"lng":177.117944,"notes":"","src":"xlsx"},{"id":"23","lat":-38.002494,"lng":177.117371,"notes":"","src":"xlsx"},{"id":"24","lat":-37.998714,"lng":177.121318,"notes":"","src":"kmz"},{"id":"25","lat":-38.005057,"lng":177.115838,"notes":"","src":"kmz"},{"id":"26","lat":-38.003437,"lng":177.116811,"notes":"","src":"kmz"},{"id":"27","lat":-38.000985,"lng":177.117976,"notes":"","src":"kmz"},{"id":"28","lat":-37.999694,"lng":177.118561,"notes":"","src":"kmz"},{"id":"29","lat":-38.000708,"lng":177.120192,"notes":"","src":"kmz"},{"id":"30","lat":-37.999898,"lng":177.121127,"notes":"","src":"kmz"},{"id":"31","lat":-38.0008,"lng":177.123411,"notes":"","src":"xlsx"},{"id":"32","lat":-37.996821,"lng":177.114683,"notes":"","src":"xlsx"},{"id":"33","lat":-37.998223,"lng":177.124293,"notes":"","src":"xlsx"},{"id":"34","lat":-37.999549,"lng":177.12331,"notes":"","src":"kmz"}],
+"history":[{"trap":"1","date":"2026-10-26","days":96,"rats":8,"possums":0,"reset":"2026-10-26","comments":""},{"trap":"2","date":"2026-10-26","days":56,"rats":4,"possums":0,"reset":"2026-10-26","comments":""},{"trap":"3","date":"2026-10-27","days":87,"rats":8,"possums":0,"reset":"2026-10-27","comments":""},{"trap":"4","date":"2026-10-27","days":100,"rats":6,"possums":0,"reset":"2026-10-27","comments":""},{"trap":"5","date":"2026-10-27","days":102,"rats":2,"possums":0,"reset":"2026-10-27","comments":""},{"trap":"6","date":"2026-10-27","days":101,"rats":21,"possums":0,"reset":"2026-10-27","comments":""},{"trap":"7","date":"2026-10-27","days":99,"rats":19,"possums":3,"reset":"2026-10-27","comments":""},{"trap":"8","date":"2026-10-27","days":97,"rats":7,"possums":0,"reset":"2026-10-27","comments":""},{"trap":"9","date":"2026-10-27","days":94,"rats":9,"possums":1,"reset":"2026-10-27","comments":""},{"trap":"10","date":"2026-10-27","days":96,"rats":7,"possums":1,"reset":"2026-10-27","comments":""},{"trap":"11","date":"2026-10-28","days":62,"rats":13,"possums":1,"reset":"2026-10-28","comments":""},{"trap":"12","date":"2026-10-28","days":95,"rats":9,"possums":0,"reset":"2026-10-28","comments":"lights cleaned.needs new tube"},{"trap":"13","date":"2026-10-27","days":94,"rats":16,"possums":3,"reset":"2026-10-27","comments":""},{"trap":"14","date":"2026-10-28","days":109,"rats":8,"possums":2,"reset":"2026-10-28","comments":""},{"trap":"15","date":"2026-10-27","days":102,"rats":5,"possums":0,"reset":"2026-10-27","comments":"new lure cap fitted"},{"trap":"16","date":"2026-10-26","days":104,"rats":6,"possums":0,"reset":"2026-10-26","comments":""},{"trap":"17","date":"2026-10-26","days":102,"rats":3,"possums":1,"reset":"2026-10-26","comments":"eye 2 cleaned.New tube fitted"},{"trap":"18","date":"2026-10-27","days":97,"rats":37,"possums":1,"reset":"2026-10-27","comments":""},{"trap":"19","date":"2026-10-27","days":89,"rats":33,"possums":1,"reset":"2026-10-27","comments":""},{"trap":"20","date":"2026-10-27","days":97,"rats":2,"possums":0,"reset":"2026-10-27","comments":""},{"trap":"21","date":"2026-10-28","days":101,"rats":15,"possums":0,"reset":"2026-10-28","comments":""},{"trap":"22","date":"2026-10-28","days":99,"rats":17,"possums":1,"reset":"2026-10-28","comments":"both tags broken"},{"trap":"23","date":"2026-10-28","days":104,"rats":29,"possums":1,"reset":"2026-10-28","comments":""},{"trap":"24","date":"2026-10-28","days":108,"rats":16,"possums":0,"reset":"2026-10-28","comments":""},{"trap":"25","date":"2026-10-28","days":28,"rats":2,"possums":0,"reset":"2026-10-28","comments":""},{"trap":"26","date":"2026-10-28","days":31,"rats":3,"possums":0,"reset":"2026-10-28","comments":""},{"trap":"27","date":"2026-10-28","days":31,"rats":3,"possums":0,"reset":"2026-10-28","comments":""},{"trap":"28","date":"2026-10-28","days":32,"rats":2,"possums":0,"reset":"2026-10-28","comments":""},{"trap":"29","date":"2026-10-28","days":30,"rats":5,"possums":0,"reset":"2026-10-28","comments":""},{"trap":"30","date":"2026-10-28","days":29,"rats":4,"possums":0,"reset":"2026-10-28","comments":""},{"trap":"31","date":"2026-10-27","days":28,"rats":5,"possums":0,"reset":"2026-10-27","comments":""},{"trap":"32","date":"2026-10-28","days":28,"rats":1,"possums":1,"reset":"2026-10-28","comments":""},{"trap":"33","date":"2026-10-26","days":25,"rats":3,"possums":0,"reset":"2026-10-26","comments":""},{"trap":"34","date":"2026-10-28","days":28,"rats":2,"possums":0,"reset":"2026-10-28","comments":""}]};
+
+/* ---------- Storage (IndexedDB, falls back to memory) ---------- */
+const DB={db:null,mem:{}};
+DB.open=()=>new Promise(res=>{try{const r=indexedDB.open('at220',1);r.onupgradeneeded=()=>{r.result.createObjectStore('kv');r.result.createObjectStore('photos');};r.onsuccess=()=>{DB.db=r.result;res();};r.onerror=()=>res();}catch(e){res();}});
+DB.get=(store,k)=>new Promise(res=>{if(!DB.db)return res(DB.mem[store+k]);try{const q=DB.db.transaction(store).objectStore(store).get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res();}catch(e){res();}});
+DB.put=(store,k,v)=>new Promise(res=>{if(!DB.db){DB.mem[store+k]=v;return res();}try{const t=DB.db.transaction(store,'readwrite');t.objectStore(store).put(v,k);t.oncomplete=()=>res();t.onerror=()=>res();}catch(e){res();}});
+DB.all=(store)=>new Promise(res=>{if(!DB.db)return res({});const out={};try{const c=DB.db.transaction(store).objectStore(store).openCursor();c.onsuccess=()=>{const cur=c.result;if(cur){out[cur.key]=cur.value;cur.continue();}else res(out);};}catch(e){res(out);}});
+
+let S={traps:[],visits:[],settings:{site:'Uretara Island',observer:'',round:''},guidePhotos:{}};
+const save=()=>DB.put('kv','state',{traps:S.traps,visits:S.visits,settings:S.settings,guidePhotos:S.guidePhotos,clashes:S.clashes||[]});
+
+/* ---------- Helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+const fmtD=d=>d?new Date(d+'T00:00').toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'2-digit'}):'';
+const daysBetween=(a,b)=>Math.round((new Date(b+'T00:00')-new Date(a+'T00:00'))/864e5);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const monthRound=d=>new Date((d||today())+'T00:00').toLocaleDateString('en-NZ',{month:'long',year:'numeric'});
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2200);}
+const R=6371000,rad=x=>x*Math.PI/180;
+function dist(a,b){const dLat=rad(b.lat-a.lat),dLng=rad(b.lng-a.lng);const h=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+function bearing(a,b){const y=Math.sin(rad(b.lng-a.lng))*Math.cos(rad(b.lat));const x=Math.cos(rad(a.lat))*Math.sin(rad(b.lat))-Math.sin(rad(a.lat))*Math.cos(rad(b.lat))*Math.cos(rad(b.lng-a.lng));return (Math.atan2(y,x)*180/Math.PI+360)%360;}
+const fmtDist=m=>m==null?'':m<1000?Math.round(m)+' m':(m/1000).toFixed(2)+' km';
+const card8=b=>['N','NE','E','SE','S','SW','W','NW'][Math.round(b/45)%8];
+const trapById=id=>S.traps.find(t=>t.id===String(id));
+const sortTraps=a=>a.slice().sort((x,y)=>(parseFloat(x.id)||0)-(parseFloat(y.id)||0)||String(x.id).localeCompare(y.id));
+const curRound=()=>S.settings.round||monthRound();
+const roundVisits=r=>S.visits.filter(v=>v.round===(r||curRound()));
+const visitFor=(id,r)=>roundVisits(r).find(v=>v.trap===String(id));
+function lastVisitBefore(id,date,excludeId){return S.visits.filter(v=>v.trap===String(id)&&v.id!==excludeId&&(v.reset||v.date)<=date).sort((a,b)=>(b.reset||b.date).localeCompare(a.reset||a.date))[0];}
+const rounds=()=>[...new Set([curRound(),...S.visits.map(v=>v.round)])];
+
+/* ---------- GPS & compass ---------- */
+const G={pos:null,heading:null,watch:null};
+function gpsWait(x){const m={insecure:'GPS and compass are blocked because the app was opened as a file or preview. Open it from its web address (https://…) or the home-screen icon.',denied:'Location permission is blocked for this app. Allow Location for this site in the browser, and for the browser in phone Settings › Apps.',off:'No GPS signal yet – check Location is turned on (swipe down from the top of the screen) and you are outdoors.',nogeo:'This browser has no GPS access.'};return G.err?m[G.err]:(x||'Waiting for GPS…');}
+function showGpsErr(){document.querySelectorAll('.gpsmsg').forEach(e=>{e.textContent=gpsWait();e.style.color='var(--bad)';});}
+function startGPS(){if(G.watch)return;if(!window.isSecureContext||(location.protocol!=='https:'&&!/^(localhost|127\.0\.0\.1)$/.test(location.hostname))){G.err='insecure';return setTimeout(showGpsErr,50);}if(!navigator.geolocation){G.err='nogeo';return setTimeout(showGpsErr,50);}
+  G.watch=navigator.geolocation.watchPosition(p=>{G.err=null;G.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy};onGeo();},e=>{if(G.pos)return;G.err=e.code===1?'denied':'off';if(e.code===1){navigator.geolocation.clearWatch(G.watch);G.watch=null;}showGpsErr();},{enableHighAccuracy:true,maximumAge:3000,timeout:20000});}
+function onOrient(e){let h=null;if(e.webkitCompassHeading!=null)h=e.webkitCompassHeading;else if(e.absolute&&e.alpha!=null)h=360-e.alpha;if(h!=null){G.heading=h;onGeo(true);}}
+async function enableCompass(){if(G.err==='insecure'||!window.isSecureContext)return toast('Compass blocked – open the app from its web address, not a file');setTimeout(()=>{if(G.heading==null)toast('No compass reading – hold the phone flat and move it in a figure-8');},4000);try{if(typeof DeviceOrientationEvent!=='undefined'&&DeviceOrientationEvent.requestPermission){const p=await DeviceOrientationEvent.requestPermission();if(p!=='granted')return toast('Compass permission refused');}window.addEventListener('deviceorientationabsolute',onOrient);window.addEventListener('deviceorientation',onOrient);toast('Compass on – hold phone flat');}catch(e){toast('Compass not available');}}
+let geoHook=null;function onGeo(compassOnly){if(geoHook)geoHook(compassOnly);}
+
+/* ---------- Trap diagram (schematic) ---------- */
+function trapSVG(hl){
+  if(hl==='none'||hl==='')return '';
+  if(hl==='led')return `<figure style="margin:8px 0 12px"><img src="images/button-led-photo.jpg" alt="Trap circuit board showing the LED (light) and the button" style="display:block;width:100%;max-width:520px;border-radius:10px;border:1px solid var(--line)"><figcaption style="font-size:12px;color:var(--mute);margin-top:4px">The LED (light) and button on the trap's circuit board.</figcaption></figure>`;
+  const H=k=>hl===k?'#e0482f':'currentColor', F=k=>hl===k?'rgba(224,72,47,.18)':'none';
+  return `<svg class="diagram" viewBox="0 0 360 300" fill="none" stroke="currentColor" stroke-width="2" font-family="system-ui" font-size="12">
+  <rect x="20" y="0" width="34" height="300" fill="rgba(120,90,60,.15)" stroke="none"/><text x="24" y="292" fill="currentColor" stroke="none" font-size="10">tree</text>
+  <rect x="58" y="40" width="22" height="16"/><rect x="58" y="210" width="22" height="16"/>
+  <rect x="80" y="20" width="110" height="230" rx="14"/>
+  <rect x="96" y="34" width="78" height="44" rx="6" stroke="${H('battery')}" fill="${F('battery')}"/>
+  <text x="135" y="61" text-anchor="middle" fill="${H('battery')}" stroke="none">battery</text>
+  <path d="M135 90 q-18 0 -18 22 v20 h36 v-20 q0 -22 -18 -22z" stroke="${H('lure')}" fill="${F('lure')}"/>
+  <text x="135" y="120" text-anchor="middle" fill="${H('lure')}" stroke="none">lure</text>
+  <path d="M135 132 v40" stroke="${H('lure')}" stroke-dasharray="3 3"/>
+  <circle cx="135" cy="152" r="9" stroke="${H('led')}" fill="${hl==='led'?'#3fb36b':'none'}"/>
+  <rect x="96" y="176" width="78" height="48" rx="6" stroke="${H('eyes')}" fill="${F('eyes')}"/>
+  <circle cx="114" cy="200" r="6" stroke="${H('eyes')}"/><circle cx="156" cy="200" r="6" stroke="${H('eyes')}"/>
+  <path d="M135 250 v42 M120 292 h30" stroke="${H('ladder')}"/>
+  <path d="M190 236 C215 250 205 280 230 292" stroke="${H('ladder')}" stroke-dasharray="4 3"/>
+  <g stroke="var(--mute)" stroke-width="1"><path d="M174 56 H232"/><path d="M153 112 H232"/><path d="M144 152 H232"/><path d="M174 200 H232"/><path d="M215 280 H232"/></g>
+  <g fill="currentColor" stroke="none">
+  <text x="236" y="60" fill="${H('battery')}">Battery pack</text>
+  <text x="236" y="116" fill="${H('lure')}">Lure pouch + hose</text>
+  <text x="236" y="156" fill="${H('led')}">LED button</text>
+  <text x="236" y="204" fill="${H('eyes')}">Sensor eyes</text>
+  <text x="236" y="284" fill="${H('ladder')}">Rat ladder / mesh</text>
+  </g>
+  <text x="170" y="14" text-anchor="middle" fill="var(--mute)" stroke="none" font-size="10">Schematic only – not to scale. Add your own photos below.</text>
+  </svg>`;
+}
+
+/* ---------- Guides ---------- */
+let GUIDES=[{"id": "safety", "t": "Safety first", "hl": "led", "steps": [{"text": "[Trap] Treat every AT220 as LIVE. Keep hands, fingers and face away from the trap opening and kill bar at all times.", "photo": "safety-handling.jpg"}, {"text": "[Trap] The button: **1 press** wakes the trap. **One more press** (after waking) fires it. **3 presses** = pump mode (constant orange) – then **press and hold** to pump lure. **4 presses without pausing** sets the trap (green). Wait 1–3 seconds between each of these. See **Button presses & lights**.", "photo": ""}, {"text": "[Trap] Before cleaning the lights or clearing debris: **trigger the trap first** – press once to wake, wait 1–3 seconds, press once more (constant red) – **then remove the battery**, with the kill bar closed so it can't re-set.", "photo": ""}, {"text": "[Trap] Only reconnect the battery and set the trap when everything else is finished and your hands are clear.", "photo": ""}, {"text": "Wear gloves when handling dead animals or lure. Bag carcasses and remove them from the site if required.", "photo": ""}], "tip": [], "warn": ["**NEVER put hands inside a set trap.**"]}, {"id": "guideapp", "t": "Finding your way around the Guidance app", "hl": "none", "steps": [{"text": "[Guidance app] The menu bar along the **bottom of the screen** has five buttons, left to right: **Traps** (trap list), **Map** (offline map with your GPS position), **Service** (step-by-step service form), **Guides** (these instructions) and **Report** (round results).", "photo": ""}, {"text": "[Guidance app] The **round name** button at the **top right** of the green header (e.g. \"Nov 2026\") opens Settings – change the round, import the trap list, load app-text.xlsx, backup.", "photo": ""}, {"text": "[Guidance app] To find a trap: tap **Traps** (bottom left), then tap the trap. Its page shows distance and direction – tap **Use compass** for a pointing arrow. Location notes are further down the page.", "photo": ""}, {"text": "[Guidance app] To service a trap: tap **Service** (middle of the bottom bar), or **Start service of trap …** (the green button at the bottom of a trap's page). On the first screen pick the trap under **Nearest to you** or **Or choose**.", "photo": ""}, {"text": "[Guidance app] The service form has 8 screens – the coloured bar at the top shows where you are. Tap **Next ›** (bottom right) to move on, **‹ Back** (bottom left) to go back. The small grey buttons on each screen (e.g. **How to replace**) open the matching guide.", "photo": ""}, {"text": "[Guidance app] On the last screen tap **Save service** (bottom right). The trap then shows as done in the Traps list.", "photo": ""}, {"text": "[Guidance app] For the report tap **Report** (bottom right of the menu bar). The **Print / Save PDF**, **Excel** and **CSV** buttons are at the top of the report.", "photo": ""}], "tip": ["Labels on each step show where it happens: **At the trap** (on the trap itself), **NZAT app** (the NZ Autotraps app), **Phone settings** (your phone's own Wi-Fi / flight mode settings) or **Guidance app** (this app)."], "warn": []}, {"id": "data", "t": "Reading the trap data", "hl": "led", "steps": [{"text": "[NZAT app] Install the free NZAT app (NZ Autotraps / GroundTruth) on your phone and log in **before** leaving mobile coverage.", "photo": ""}, {"text": "[NZAT app] At the trap, connect to the trap's Wi-Fi from the NZAT app – no mobile coverage is needed. See the **Using the NZAT app** and **NZAT app – where to find things** guides (Guides button, bottom of screen).", "photo": ""}, {"text": "[NZAT app] On the NZAT **Triggers** tab (bottom of screen) read the **Triggers** and **Possums** boxes at the top – not All cycles. **Triggers minus possums = rats**.", "photo": ""}, {"text": "[NZAT app] Note the trap number, number of possums, total triggers and the **run time** shown (days only).", "photo": ""}, {"text": "[Guidance app] Enter these on screen 3 of the service form (**Service**, bottom of screen) – it works out the rats for you.", "photo": ""}, {"text": "[NZAT app] **Re-set the counts** – green **RESET COUNTS** button on the Triggers tab, under the count boxes – so the next round starts from zero.", "photo": ""}, {"text": "[Guidance app] If the NZAT app will not connect, count carcasses / signs on the ground and tap **Manual count** (under \"How were counts obtained?\" on screen 3 of the service form).", "photo": ""}], "tip": ["Data entered in the NZAT app can also sync to Trap.NZ later (AT220 Telemetry report). The Guidance app keeps its own offline copy for the Uretara report."], "warn": []}, {"id": "nzat", "t": "Using the NZAT app – servicing step by step", "hl": "none", "steps": [{"text": "[Phone settings] Have your phone on. **Turn phone Wi-Fi OFF.** iPhone: swipe down from the **top-right corner** of the screen and tap the Wi-Fi icon. Android: swipe down from the **top of the screen** and tap Wi-Fi.", "photo": "nzat-01.jpg"}, {"text": "[NZAT app] Open the NZAT app. It opens on the **Comms** screen. The NZAT app's tabs run along the **bottom of the screen**: **Comms**, **Trap**, **Triggers**, **Pump**. (If the app finds no connection, you may need to turn on flight mode – same swipe-down panel as Wi-Fi.)", "photo": ""}, {"text": "[Trap] Take the lid off the trap. Push the button **once** – a flashing green light comes on.", "photo": "nzat-02.jpg"}, {"text": "[Phone settings] **Turn phone Wi-Fi ON** and select the trap's Wi-Fi. Its name starts **ESP_** followed by letters/numbers that match the label on the trap's circuit board (or shows the trap number if it has been renamed). iPhone: Settings › Wi-Fi – when the trap shows, press the blue **\"i\"** at the **right-hand end** of that line to activate the trap connection.", "photo": "nzat-03.jpg"}, {"text": "[Phone settings] Connect the phone to the trap Wi-Fi. The phone may warn **\"no internet connection\"** – that is expected, stay connected.", "photo": "nzat-04.jpg"}, {"text": "[NZAT app] Go back to the NZAT app. On the **Comms** tab (bottom left) tap the green **CONNECT** button – it is just under the green banner near the top of the screen. The banner then reads **\"Trap network: Connected\"** with the trap name. iPhone: if it fails, tap CONNECT once or twice more.", "photo": "nzatapp-connect.jpg"}, {"text": "[NZAT app] Tap the **Triggers** tab (bottom of screen, third from the left). Three boxes run across the top: **All cycles**, **Triggers** and **Possums**. Use **Triggers** – not All cycles. **Triggers minus Possums = rats.**", "photo": "nzatapp-triggers.jpg"}, {"text": "[NZAT app] Note the trap number, Triggers, Possums and the **run time** as shown (days only).", "photo": ""}, {"text": "[Guidance app] Enter Triggers, Possums and run time on screen 3 of the service form (**Service**, bottom of screen).", "photo": ""}, {"text": "[NZAT app] **Re-set the counts:** still on the **Triggers** tab, tap the green **RESET COUNTS** button – right-hand side, just under the three count boxes, next to \"Last Reset\". Tap **Confirm** if asked. The counts go to 0 and the Last Reset date updates.", "photo": "nzat-06.jpg"}, {"text": "[Trap] Unscrew the battery.", "photo": ""}, {"text": "[Trap] Re-fill the lure pouch from the squeeze bottle. Check the tube is not twisted.", "photo": ""}, {"text": "[Trap] Fit a new (charged) battery.", "photo": ""}, {"text": "[Trap] Press the button **3 times** – the light goes **constant orange** (pump mode). Then **press and hold** (or press a 4th time) to pump lure. Wait 1–3 seconds, then press **4 times without pausing** to set the trap – the light goes **green**.", "photo": ""}, {"text": "[Trap] Leave the trap with the **green light** showing. Fit the lid and fasten it with the black tabs.", "photo": ""}, {"text": "[NZAT app] Tap **Comms** (bottom left), then the red **DISCONNECT** button (right of CONNECT). The visit record is kept in the NZAT app and syncs to Trap.NZ next time you have signal.", "photo": ""}, {"text": "[Guidance app] Tap **Next ›** (bottom right) through the remaining screens and **Save service** on the last one.", "photo": ""}], "tip": ["If an **orange** or **red** warning shows, the lights are obscured – follow the **Cleaning the sensor lights** guide before you set the trap."], "warn": ["**NEVER put hands inside a set trap.**", "In the NZAT app, **do not press ARM or FIRE** (lower down the Triggers tab) – holding FIRE for 5 seconds fires the trap."]}, {"id": "nzatscreens", "t": "NZAT app – where to find things", "hl": "none", "steps": [{"text": "[NZAT app] **Tabs** run along the **bottom of the screen**, left to right: **Comms**, **Trap**, **Triggers**, **Pump**. The menu (three lines) is at the **top right**.", "photo": ""}, {"text": "[NZAT app] **Comms tab** (bottom left) – the green banner at the top shows **\"Trap network: Connected\"**, the trap name, time connected, the trap status (**SET** when set) and the trap Wi-Fi name (ESP_…). Under it is a row of indicators – **Pump, Motor, Bar, Cam** (green = on, orange = warning). Below that are the green **CONNECT** (left) and red **DISCONNECT** (right) buttons. Further down: trap name, trap position and **Status** (Trap ready, Pump ready).", "photo": "nzatapp-comms.jpg"}, {"text": "[NZAT app] **Trap tab** (second from left) – **Bar state** at the top, then **Eye 1** and **Eye 2** side by side, each with a value and **Light Level**. A **green tick** means that eye is clear. **Red** means it is obscured – clean the lights. (The Accelerometer / DETECT button at the bottom is a possum-sensor test – not needed for servicing.)", "photo": "nzatapp-trap.jpg"}, {"text": "[NZAT app] **Triggers tab** (third from left) – three boxes across the top: **All cycles**, **Triggers**, **Possums**. Under them, **Last Reset** (date of the last reset) with the green **RESET COUNTS** button on the right. Lower down: Day/Night, Timer, Daytime ops (leave Disabled), Manual Control, and **ARM** / **FIRE** (do not use).", "photo": "nzatapp-triggers.jpg"}, {"text": "[NZAT app] **Pump tab** (bottom right) – days between baiting, pump run time, pump cycles and a manual pump button. No changes needed on a normal service.", "photo": ""}], "tip": ["**If it won't connect:** \"Wrong type – Cellular\" = turn mobile data off; \"Wrong type – Bluetooth\" = turn Bluetooth off; \"Wrong type – VPN\" = turn the VPN off. \"No traps found\" = the trap's Wi-Fi switched itself off (it only stays on a few minutes) – press the trap button once more (don't press repeatedly – it can fire the trap) and reconnect to the ESP_ Wi-Fi. \"Connection fails\" = iPhone: tap CONNECT again once or twice; Android: unscrew the battery, refit it and start again.", "Based on NZ Autotraps' **NZAT App Support guide v1.0** (app version 0.5.2) – nzautotraps.com › Downloads. Newer app versions may look slightly different."], "warn": ["**Do not press ARM or FIRE** on the Triggers tab, and leave **Daytime ops** off and the **Pump** settings as they are unless the team has agreed a change."]}, {"id": "battery", "t": "Replacing / charging the battery", "hl": "battery", "steps": [{"text": "[NZAT app] Read the counts and tap **RESET COUNTS** on the Triggers tab first (see the Using the NZAT app guide).", "photo": ""}, {"text": "[Trap] Unscrew the battery.", "photo": "battery-connected.jpg"}, {"text": "[Trap] Re-fill the lure pouch while the battery is out (see Topping up the lure).", "photo": ""}, {"text": "[Trap] Fit a fully charged battery and screw it in firmly.", "photo": "battery-plug.jpg"}, {"text": "[Trap] Press the button **3 times** – the light goes **constant orange** (pump mode). Then **press and hold** (or press a 4th time) to pump lure. Wait 1–3 seconds, then press **4 times without pausing** to set the trap – the light goes **green**.", "photo": ""}, {"text": "[Guidance app] On screen 4 of the service form (Battery) tap **Replaced with charged pack**.", "photo": ""}, {"text": "Take the old battery home and charge it overnight with a USB charger.", "photo": "battery-charger.jpg"}], "tip": ["A charge typically lasts about 4–6 months, less with high activity, sensor faults or frequent app use. Carry spare charged batteries on each round. No light at all usually means a flat or badly connected battery."], "warn": []}, {"id": "lure", "t": "Topping up the lure", "hl": "lure", "steps": [{"text": "[Trap] Do this while the battery is unscrewed.", "photo": ""}, {"text": "[Trap] Re-fill the lure pouch from the squeeze bottle.", "photo": "lure-pouch.jpg"}, {"text": "[Trap] Check the tube is not twisted, kinked or blocked. Fit the lure cap securely.", "photo": ""}, {"text": "[Trap] After fitting the new battery: press the button **3 times** – the light goes **constant orange** (pump mode). Then **press and hold** (or press a 4th time) to pump lure. Wait 1–3 seconds, then press **4 times without pausing** to set the trap – the light goes **green**.", "photo": ""}, {"text": "[Trap] Wipe up spilt lure – it attracts insects and birds.", "photo": ""}, {"text": "[Guidance app] On screen 5 of the service form (Lure) tap **Topped up**, **New pouch** or **New tube / cap fitted** so it shows in the report.", "photo": ""}], "tip": [], "warn": []}, {"id": "eyes", "t": "Cleaning the sensor lights (orange / red warning)", "hl": "eyes", "steps": [{"text": "If the lights are obscured, the trap light blinks **orange** (or **red**).", "photo": ""}, {"text": "[Trap] **Trigger the trap:** press the button **once** to wake it (green), wait 1–3 seconds, then press **once more** – the light goes **constant red** and the trap fires.", "photo": ""}, {"text": "[Trap] **Then remove the battery** (unscrew it) with the kill bar closed, so the trap can't re-set.", "photo": ""}, {"text": "[Trap] Spray both lights with water from the spray bottle.", "photo": ""}, {"text": "[Trap] Brush rubbish off the lights with a paint brush and toothbrush.", "photo": ""}, {"text": "[Trap] Spray again to clean.", "photo": ""}, {"text": "[Trap] Replace the battery and press the button **4 times without pausing** to reset the trap.", "photo": ""}, {"text": "[Trap] If the trap light is **green**, everything is OK. Replace the lid and fasten it with the black tabs.", "photo": ""}, {"text": "[NZAT app] If the light is **red**, reconnect to the trap in the NZAT app (see **Using the NZAT app**, steps 4–6), tap the **Trap** tab (bottom of screen, second from left) and check **Eye 1** and **Eye 2**: a green tick = clear, red = still obscured.", "photo": "nzatapp-trap.jpg"}, {"text": "[Trap] If the lights still show as obscured, **clean them again** – repeat steps 2–8 (trigger, remove battery, spray, brush, spray, replace battery) until the light is **green**.", "photo": ""}, {"text": "[Guidance app] On screen 6 of the service form (Sensor lights) tap **Cleaned**, **Eye 1 cleaned** or **Eye 2 cleaned**.", "photo": ""}], "tip": ["Don't scrub hard or use solvents – scratched lenses cause false readings."], "warn": ["**Trigger the trap first** (wake it, then press once more – constant red), **then remove the battery** – before you touch the lights. Never clean the lights on a set trap."]}, {"id": "debris", "t": "Clearing debris, mesh & tags", "hl": "ladder", "steps": [{"text": "[Trap] Make the trap safe first: **trigger the trap** (press once to wake, wait 1–3 seconds, press once more – constant red), **then remove the battery**.", "photo": ""}, {"text": "[Trap] Clear debris only if it affects the lights or the trap movement. Avoid unnecessary handling.", "photo": ""}, {"text": "[Trap] Check the rat ladder (hanging webbing / mesh) is intact and reaches the ground. Free any caught animals.", "photo": ""}, {"text": "[Trap] Check the trap number tag and mounting brackets are secure.", "photo": ""}, {"text": "[Trap] Clear vegetation around the trap so animals can reach it.", "photo": ""}, {"text": "[Guidance app] Record what you found on screen 7 of the service form (General check) – e.g. **Debris cleared** or **Tag(s) broken**.", "photo": ""}], "tip": [], "warn": []}, {"id": "led", "t": "Button presses & lights", "hl": "led", "steps": [{"text": "[Trap] **1 press** – wakes the trap (also restarts the Wi-Fi link for the NZAT app).", "photo": "button-led.jpg"}, {"text": "[Trap] **Fire the trap** – after waking, wait 1–3 seconds and press **once more**. Light goes **constant red** (manual) and the trap fires if set.", "photo": ""}, {"text": "[Trap] **Pump lure** – **3 presses**: light goes **constant orange**. Then **press and hold** (or a 4th press) to run the pump.", "photo": ""}, {"text": "[Trap] **Set the trap / end manual** – **4 presses without pausing**: light goes **green**.", "photo": ""}, {"text": "[Trap] Wait **1–3 seconds** between each of these steps.", "photo": ""}, {"text": "[Trap] **Green blinking** – all good. Always leave the trap like this.", "photo": ""}, {"text": "[Trap] **Orange blinking** – an eye is not completely clear. Clean the lights.", "photo": ""}, {"text": "[Trap] **Orange constant** – manual pump mode.", "photo": ""}, {"text": "[Trap] **Red blinking** – fault, often a blocked eye. Clean the lights; if still red, check **Eye 1** / **Eye 2** on the NZAT app **Trap** tab.", "photo": ""}, {"text": "[Trap] **Red constant** – manual mode (trap fired). Press **4 times** to return to automatic.", "photo": ""}, {"text": "[Trap] **No light** – asleep or flat battery. Press once; still no light = flat battery.", "photo": ""}, {"text": "[Guidance app] Record the light you saw on arrival on screen 2 of the service form (LED status on arrival).", "photo": ""}], "tip": [], "warn": []}, {"id": "reset", "t": "Setting the trap & finishing", "hl": "led", "steps": [{"text": "[NZAT app] Make sure the counts have been re-set (Triggers tab – the Last Reset date should be today).", "photo": ""}, {"text": "[Trap] Fit the new battery with hands well clear of the opening.", "photo": ""}, {"text": "[Trap] Press the button **3 times** – the light goes **constant orange** (pump mode). Then **press and hold** (or press a 4th time) to pump lure. Wait 1–3 seconds, then press **4 times without pausing** to set the trap – the light goes **green**.", "photo": ""}, {"text": "[Trap] Leave the trap with the **green light** showing. Fit the lid and fasten it with the black tabs.", "photo": ""}, {"text": "[Guidance app] On the last service screen tap **+ Add photo** to take a photo of the trap, tick **Counts re-set in NZAT app**, then tap **Save service** (bottom right).", "photo": ""}, {"text": "Check nothing is left behind (tools, old pouches, rubbish).", "photo": ""}], "tip": [], "warn": []}];
+const normG=g=>({...g,steps:g.steps.map(x=>typeof x==='string'?{text:x,photo:''}:x),tip:[].concat(g.tip||[]),warn:[].concat(g.warn||[])});
+GUIDES=GUIDES.map(normG);
+const TAGS={'Trap':['t-trap','At the trap'],'NZAT app':['t-nzat','NZAT app'],'Phone settings':['t-phone','Phone settings'],'Guidance app':['t-guide','Guidance app']};
+const tagHTML=k=>`<span class="tag ${TAGS[k][0]}">${TAGS[k][1]}</span>`;
+const md=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\[(Trap|NZAT app|Phone settings|Guidance app)\]\s*/gi,(m,k)=>tagHTML(Object.keys(TAGS).find(x=>x.toLowerCase()===k.toLowerCase()))).replace(/\n/g,'<br>');
+const TAG_KEY=()=>`<div class="tip sm"><b>Labels show where each step happens:</b><br>${tagHTML('Trap')} on the trap itself<br>${tagHTML('NZAT app')} the NZ Autotraps app<br>${tagHTML('Phone settings')} your phone's Wi-Fi / flight mode settings<br>${tagHTML('Guidance app')} this app</div>`;
+/* Service form wording – overridable from app-text.xlsx (Service text sheet) */
+let SVC={"safety_title": "Safety & first look", "safety_warning": "**NEVER put hands inside a set trap.** Before cleaning the lights or clearing debris: **trigger the trap first** (press once to wake, then once more), **then remove the battery**.", "data_title": "Read the data (NZAT app)", "data_step": ["[Phone settings] Phone on, **Wi-Fi OFF** (swipe down from the top of the screen). [NZAT app] Open the NZAT app – flight mode if no connection found.", "[Trap] Take the lid off. Push the button **once** – flashing green light.", "[Phone settings] **Wi-Fi ON**, select the trap's Wi-Fi (starts **ESP_**; iPhone: blue **\"i\"** at the right-hand end) and connect.", "[NZAT app] **Comms** tab (bottom left): tap the green **CONNECT** button under the green banner.", "[NZAT app] **Triggers** tab (bottom of screen): read **Triggers** and **Possums** from the boxes at the top (not All cycles), and the **run time (days)**.", "[Guidance app] Enter them in the boxes below – rats are worked out for you.", "[NZAT app] Triggers tab: tap the green **RESET COUNTS** button (right of Last Reset) – confirm if asked."], "battery_title": "Battery", "battery_note": "[Trap] **Unscrew the battery** now. Fit the new battery after re-filling the lure.", "lure_title": "Lure", "lure_note": "[Trap] Re-fill the pouch from the squeeze bottle. Check the tube is not twisted.", "eyes_title": "Sensor lights", "eyes_note": "Only needed if the light blinked **orange** or **red**. [Trap] **Trigger the trap** (press once to wake, wait, press once more – constant red), **then remove the battery**. Spray, brush, spray again. Replace the battery and press **4 times without pausing**. **Green** = OK. **Red** = reconnect in the NZAT app, check **Eye 1** / **Eye 2** on the **Trap** tab and re-clean if necessary.", "check_title": "General check", "check_note": "", "finish_title": "Set the trap & finish", "finish_note": "[Trap] Fit new battery. Press **3 times** (constant orange), then **press and hold** to pump lure. Wait 1–3 seconds, then press **4 times without pausing** to set. Leave with the **green light** showing, fit the lid and fasten the black tabs. [Guidance app] Fill in below, then tap **Save service** (bottom right)."};
+const SVC_DEFAULT=JSON.parse(JSON.stringify(SVC));
+GUIDES.push({"id": "endround", "t": "End of round – what to do (everyone)", "hl": "none", "steps": [{"text": "[Guidance app] **Check your traps are all saved.** Tap **Traps** (bottom left) – every trap you serviced should show a green **done** tag. If one is missing, service it or tell the coordinator why it wasn't done.", "photo": ""}, {"text": "[Guidance app] **Check the numbers.** Tap each of your traps and check the triggers, possums, rats, run time and comments. To fix one, tap **Start service of trap …** – it opens your saved record (marked **editing**) – correct it and tap **Save service**.", "photo": ""}, {"text": "[Guidance app] **Note anything that needs fixing** in the trap's **Comments** (e.g. broken tag, new tube needed, trap not firing) so it shows in the report.", "photo": ""}, {"text": "[Guidance app] **Send your data** once you have coverage: on the **Traps** page tap **Send my round** (also under Report › Data). If you took photos it asks whether to include them – **OK** = with photos (bigger file), **Cancel** = data only.", "photo": ""}, {"text": "[Phone settings] Your phone's share menu opens – send the file to the **coordinator** by email or WhatsApp, or save it to the shared Dropbox folder. The file is named with the round, your name and the date.", "photo": ""}, {"text": "[Guidance app] The Traps page then shows **Sent** with the date and time. If you change a record afterwards it shows **changed since you sent** – tap **Send my round** again. Sending twice does no harm.", "photo": ""}, {"text": "[Trap] **Charge the used batteries** overnight with the USB charger so they're ready for next time.", "photo": "battery-charger.jpg"}, {"text": "Tell the coordinator about anything you're short of (lure, spare batteries, lure tubes/caps, tags) or any trap needing repair.", "photo": ""}, {"text": "[Guidance app] **Keep the data on your phone** until the coordinator confirms the report is done. Don't clear the browser history/data or delete the app.", "photo": ""}, {"text": "[Guidance app] **Next round:** check the round name at the top right of the green header matches what the coordinator has said (e.g. \"December 2026\"). Tap it to change it.", "photo": ""}], "tip": ["You don't need signal to finish the round – save everything on the island and send when you're back in coverage."], "warn": ["Don't use **Restore backup** (Settings) to share data – it replaces everything on the phone. Always use **Send my round**."]});
+GUIDES.push({"id": "share", "t": "Sending data & making the report", "hl": "none", "steps": [{"text": "[Guidance app] **Everyone:** the first time you save a service, type your name in **Serviced by** (last service screen). The app remembers it – a service can't be saved without a name.", "photo": ""}, {"text": "[Guidance app] **Everyone:** check the **round name** at the top right of the green header (e.g. \"November 2026\") is the same as the rest of the team. Only change it if the coordinator asks.", "photo": ""}, {"text": "[Guidance app] **Everyone:** service your traps and tap **Save service** each time. Everything is kept on your phone – no signal needed.", "photo": ""}, {"text": "[Guidance app] **Everyone:** back in coverage, tap **Send my round** (Traps page, or Report › Data). If you took photos it asks whether to include them – **OK** = with photos (bigger file), **Cancel** = data only.", "photo": ""}, {"text": "[Phone settings] **Everyone:** your phone's share menu opens – send the file to the coordinator by email, WhatsApp or save it to the shared Dropbox folder. (On a computer the file goes to Downloads.)", "photo": ""}, {"text": "[Guidance app] **Everyone:** keep the data on your phone until the coordinator confirms the report is done. Don't clear the browser or delete the app.", "photo": ""}, {"text": "[Guidance app] **Coordinator:** save everyone's files where your phone or computer can open them (Files / Downloads / Dropbox). Use the same phone you service with, so your own traps are already in it.", "photo": ""}, {"text": "[Guidance app] **Coordinator:** tap **Report** › **Merge round files…** and select all the files (you can do them one at a time too). Files already merged are skipped automatically.", "photo": ""}, {"text": "[Guidance app] **Coordinator:** if two people recorded the same trap, the **Clashes** box shows both side by side with the differences highlighted. Tap **Keep** on the correct one.", "photo": ""}, {"text": "[Guidance app] **Coordinator:** check the **Round check** box at the top of the Report. When all traps are in and there are no clashes it shows **Ready to publish**.", "photo": ""}, {"text": "[Guidance app] **Coordinator:** tap **Print / Save PDF**, **Excel** or **CSV**. Then **Backup (JSON)** to keep a full copy of the round.", "photo": ""}], "tip": ["If someone fixes a record and sends their file again, just merge it again – the newer edit replaces the older one automatically."], "warn": ["**Restore backup** (Settings) **replaces everything** on the phone. Use **Merge round files** to combine people's data."]});
+const GUIDES_DEFAULT=JSON.parse(JSON.stringify(GUIDES));
+const note=k=>[].concat(SVC[k]||[]).filter(Boolean).map(t=>`<div class="tip sm">${md(t)}</div>`).join('');
+let TEXT_SRC='built-in';
+function applyAppText(rowsG,rowsS){
+  if(rowsG&&rowsG.length){const out=[],by={};
+    for(const r of rowsG){const id=String(r.id||'').trim();if(!id)continue;
+      let g=by[id];if(!g){g=by[id]={id,t:String(r.title||id).trim(),hl:String(r.diagram||'none').trim().toLowerCase(),steps:[],tip:[],warn:[]};out.push(g);}
+      if(r.title&&!g.t)g.t=r.title;
+      const type=String(r.type||'step').trim().toLowerCase(),text=String(r.text||'').trim();if(!text&&!r.photo)continue;
+      if(type.startsWith('tip'))g.tip.push(text);else if(type.startsWith('warn'))g.warn.push(text);else g.steps.push({text,photo:String(r.photo||'').trim()});}
+    if(out.length)GUIDES=out;}
+  if(rowsS&&rowsS.length){const acc={};for(const r of rowsS){const k=String(r.key||'').trim();if(!k)continue;const t=String(r.text??'').trim();(acc[k]=acc[k]||[]).push(t);}
+    for(const[k,v]of Object.entries(acc))SVC[k]=Array.isArray(SVC_DEFAULT[k])?v.filter(Boolean):v[0];}
+}
+function parseAppText(buf){const wb=XLSX.read(buf,{type:'array'});
+  const sheet=n=>{const name=wb.SheetNames.find(x=>x.toLowerCase().startsWith(n));if(!name)return null;const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:''});
+    const hi=rows.findIndex(r=>r.some(c=>/guide id|^key$/i.test(String(c).trim())));if(hi<0)return null;const h=rows[hi].map(c=>String(c).trim().toLowerCase());
+    const map={id:h.findIndex(c=>c==='guide id'),title:h.findIndex(c=>c.startsWith('guide title')),diagram:h.findIndex(c=>c.startsWith('diagram')),type:h.findIndex(c=>c.startsWith('row type')),text:h.findIndex(c=>c==='text'),photo:h.findIndex(c=>c.startsWith('photo')),key:h.findIndex(c=>c==='key')};
+    return rows.slice(hi+1).map(r=>{const o={};for(const[k,i]of Object.entries(map))if(i>=0)o[k]=r[i];return o;});};
+  return{g:sheet('guide'),s:sheet('service')};}
+async function loadAppText(){
+  if(!window.XLSX)return;
+  try{const r=await fetch('app-text.xlsx',{cache:'no-cache'});if(!r.ok)throw 0;const buf=await r.arrayBuffer();const t=parseAppText(buf);applyAppText(t.g,t.s);TEXT_SRC='app-text.xlsx';
+    GUIDES.forEach(g=>g.steps.forEach(st=>st.photo&&fetch('images/'+encodeURIComponent(st.photo)).catch(()=>{})));return;}catch(e){}
+  const st=await DB.get('kv','appText');if(st){applyAppText(st.g,st.s);TEXT_SRC='imported file ('+st.name+')';}
+}
+async function importAppText(file){try{const t=parseAppText(await file.arrayBuffer());if(!t.g&&!t.s)throw 0;await DB.put('kv','appText',{...t,name:file.name});
+  GUIDES=JSON.parse(JSON.stringify(GUIDES_DEFAULT));SVC=JSON.parse(JSON.stringify(SVC_DEFAULT));applyAppText(t.g,t.s);TEXT_SRC='imported file ('+file.name+')';toast('App text loaded');vSettings();}catch(e){toast('Could not read that file as app text');}}
+
+/* ---------- Router ---------- */
+let VIEW='traps',ARG=null;
+function go(v,arg){VIEW=v;ARG=arg;geoHook=null;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v.split(':')[0]));render();window.scrollTo(0,0);}
+function render(){$('#roundBtn').textContent=curRound();$('#siteName').textContent=S.settings.site||'';({traps:vTraps,trap:vTrap,map:vMap,service:vService,guides:vGuides,guide:vGuide,report:vReport,settings:vSettings,merge:vMerge}[VIEW]||vTraps)();}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
+$('#roundBtn').onclick=()=>go('settings');
+
+/* ---------- Traps list ---------- */
+let trapSort='num';
+function vTraps(){
+  startGPS();
+  const done=roundVisits().length,total=S.traps.length;
+  let ts=sortTraps(S.traps);
+  if(trapSort==='near'&&G.pos)ts.sort((a,b)=>dist(G.pos,a)-dist(G.pos,b));
+  if(trapSort==='todo')ts.sort((a,b)=>(visitFor(a.id)?1:0)-(visitFor(b.id)?1:0)||((G.pos?dist(G.pos,a)-dist(G.pos,b):0)));
+  $('#view').innerHTML=`
+  <div class="card"><div class="row"><div class="grow"><b>${esc(curRound())}</b><div class="mute sm">${done} of ${total} traps serviced</div></div><button class="btn pri sm" onclick="go('service')">+ Service</button></div>
+  <div class="prog" style="margin-top:10px"><i class="on" style="flex:${done||0.0001}"></i><i style="flex:${Math.max(total-done,0.0001)}"></i></div>
+  <div class="seg" id="sortSeg"><button data-s="num">By number</button><button data-s="near">Nearest</button><button data-s="todo">To do first</button></div>
+  <div class="mute sm" style="margin-top:6px">${G.pos?`GPS ±${Math.round(G.pos.acc)} m`:`<span class="gpsmsg">${gpsWait()}</span>`}</div></div>
+  ${done?endRoundCard():''}
+  <ul class="list">${ts.map(t=>{const v=visitFor(t.id);const d=G.pos?dist(G.pos,t):null;
+    return `<li class="item" onclick="go('trap','${esc(t.id)}')"><div class="num ${v?'done':''}">${esc(t.id)}</div>
+    <div class="grow"><div><b>Trap ${esc(t.id)}</b> ${v?`<span class="pill ok">done ${fmtD(v.date)}</span>`:''}</div>
+    <div class="mute sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.notes)||(t.lat?`${t.lat.toFixed(5)}, ${t.lng.toFixed(5)}`:'No GPS')}</div></div>
+    <div class="sm" style="text-align:right">${d!=null?`<b>${fmtDist(d)}</b><br><span class="mute">${card8(bearing(G.pos,t))}</span>`:''}</div></li>`}).join('')}</ul>
+  <button class="btn full" onclick="addTrap()">+ Add a trap</button>`;
+  document.querySelectorAll('#sortSeg button').forEach(b=>{b.classList.toggle('on',b.dataset.s===trapSort);b.onclick=()=>{trapSort=b.dataset.s;vTraps();};});
+  let last=0;geoHook=c=>{if(c)return;const n=Date.now();if(n-last>4000){last=n;const y=scrollY;vTraps();scrollTo(0,y);}};
+}
+function addTrap(){const id=prompt('New trap number:');if(!id)return;if(trapById(id))return toast('Trap '+id+' already exists');S.traps.push({id:String(id).trim(),lat:G.pos?.lat??null,lng:G.pos?.lng??null,notes:'',src:'added'});save();go('trap',String(id).trim());}
+
+/* ---------- Trap detail / locator ---------- */
+function vTrap(){
+  const t=trapById(ARG);if(!t)return go('traps');startGPS();
+  const hist=S.visits.filter(v=>v.trap===t.id).sort((a,b)=>b.date.localeCompare(a.date));
+  const v=visitFor(t.id);
+  $('#view').innerHTML=`
+  <button class="btn sm noprint" onclick="go('traps')">‹ All traps</button>
+  <div class="card" style="margin-top:10px"><div class="row"><div class="num ${v?'done':''}" style="width:54px;height:54px;font-size:20px">${esc(t.id)}</div>
+   <div class="grow"><h2 style="margin:0">Trap ${esc(t.id)}</h2><div class="mute sm">${t.lat!=null?`${t.lat.toFixed(6)}, ${t.lng.toFixed(6)}`:'No GPS location yet'}</div></div></div>
+   ${t.lat!=null?`<svg class="compass" viewBox="0 0 220 220" id="cmp"><circle cx="110" cy="110" r="100" fill="var(--bg)" stroke="var(--line)" stroke-width="2"/>
+     <g id="ring" font-size="13" fill="var(--mute)" text-anchor="middle"><text x="110" y="28">N</text><text x="196" y="115">E</text><text x="110" y="202">S</text><text x="24" y="115">W</text></g>
+     <g id="arrow"><path d="M110 26 L136 150 L110 132 L84 150Z" fill="var(--brand)"/></g><circle cx="110" cy="110" r="5" fill="var(--ink)"/></svg>
+   <div style="text-align:center"><div class="big" id="dst">–</div><div class="mute sm gpsmsg" id="brg">${gpsWait()}</div></div>
+   <div class="btns"><button class="btn sm" onclick="enableCompass()">Use compass</button>
+   <a class="btn sm" href="https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}" target="_blank" rel="noopener">Google Maps (online)</a></div>
+   <div class="tip">Without compass: the arrow points relative to north. With compass on, hold the phone flat and walk where the arrow points. GPS under bush canopy can be ±10–20 m – use the location notes for the last bit.</div>`:''}
+   <label>Location notes (how to find it)</label>
+   <textarea id="tnotes" placeholder="e.g. 20 m past the fence stile, left side of track, on large pōhutukawa">${esc(t.notes)}</textarea>
+   <div class="btns"><button class="btn sm" id="saveNotes">Save notes</button><button class="btn sm" id="setGps">Set location to my GPS</button></div>
+   ${t.src==='kmz'?'<div class="mute sm" style="margin-top:6px">Location from New Traps.kmz (the October spreadsheet coordinates for this trap looked wrong).</div>':''}
+  </div>
+  <button class="btn pri full" onclick="go('service','${esc(t.id)}')">${v?'Edit this round\'s service':'Start service of trap '+esc(t.id)}</button>
+  <h3>History</h3>
+  ${hist.length?`<div class="tbl"><table><tr><th>Date</th><th class="c">Days</th><th class="c">Rats</th><th class="c">Possums</th><th>Comments</th></tr>${hist.map(h=>`<tr><td>${fmtD(h.date)}</td><td class="c">${h.days??''}</td><td class="c">${h.rats}</td><td class="c">${h.possums}</td><td>${esc(h.comments)}</td></tr>`).join('')}</table></div>`:'<div class="mute sm">No services recorded.</div>'}`;
+  $('#saveNotes').onclick=()=>{t.notes=$('#tnotes').value.trim();save();toast('Notes saved');};
+  $('#setGps').onclick=()=>{if(!G.pos)return toast('No GPS fix yet');if(t.lat!=null&&!confirm(`Replace saved location with your current GPS (±${Math.round(G.pos.acc)} m)?`))return;t.lat=+G.pos.lat.toFixed(6);t.lng=+G.pos.lng.toFixed(6);t.src='gps';save();vTrap();toast('Location updated');};
+  geoHook=()=>{if(!G.pos||t.lat==null)return;const d=dist(G.pos,t),b=bearing(G.pos,t);
+    $('#dst').textContent=fmtDist(d);$('#brg').textContent=`${Math.round(b)}° ${card8(b)} · GPS ±${Math.round(G.pos.acc)} m${G.heading!=null?' · compass on':''}`;
+    const rot=G.heading!=null?b-G.heading:b;$('#arrow').setAttribute('transform',`rotate(${rot} 110 110)`);
+    $('#ring').setAttribute('transform',`rotate(${G.heading!=null?-G.heading:0} 110 110)`);};
+  geoHook();
+}
+
+/* ---------- Map ---------- */
+function mapSVG(opts={}){
+  const pts=S.traps.filter(t=>t.lat!=null);if(!pts.length)return '<p class="mute">No trap locations.</p>';
+  const all=pts.concat(opts.me&&G.pos&&dist(G.pos,pts[0])<20000?[G.pos]:[]);
+  let minLa=Math.min(...all.map(p=>p.lat)),maxLa=Math.max(...all.map(p=>p.lat)),minLo=Math.min(...all.map(p=>p.lng)),maxLo=Math.max(...all.map(p=>p.lng));
+  const k=Math.cos(rad((minLa+maxLa)/2));const W=340,pad=24;
+  const spanX=Math.max((maxLo-minLo)*k,1e-4),spanY=Math.max(maxLa-minLa,1e-4);
+  const sc=(W-2*pad)/Math.max(spanX,spanY*0.8);const Hh=Math.round(spanY*sc+2*pad);
+  const X=p=>pad+(p.lng-minLo)*k*sc,Y=p=>pad+(maxLa-p.lat)*sc;
+  const m100=100/111320*sc; // 100 m in px
+  let s=`<svg id="mapsvg" viewBox="0 0 ${W} ${Hh}" font-family="system-ui">`;
+  s+=`<g stroke="var(--ink)" stroke-width="1.5"><path d="M${W-pad-m100*2} ${Hh-10} h${m100*2}"/></g><text x="${W-pad-m100}" y="${Hh-14}" font-size="10" text-anchor="middle" fill="var(--mute)">200 m</text>`;
+  s+=`<text x="${W-14}" y="20" font-size="12" text-anchor="middle" fill="var(--mute)">N</text><path d="M${W-14} 24 v14 M${W-18} 29 l4-5 4 5" stroke="var(--mute)" fill="none"/>`;
+  sortTraps(pts).forEach(t=>{const v=visitFor(t.id,opts.round);const col=opts.value?opts.value(t):(v?'var(--ok)':'#d08a1c');
+    const r=opts.radius?opts.radius(t):10;
+    s+=`<g data-id="${esc(t.id)}" style="cursor:pointer"><circle cx="${X(t).toFixed(1)}" cy="${Y(t).toFixed(1)}" r="${r}" fill="${col}" stroke="#fff" stroke-width="1.5" opacity=".92"/><text x="${X(t).toFixed(1)}" y="${(Y(t)+3.5).toFixed(1)}" font-size="9.5" font-weight="700" text-anchor="middle" fill="#fff">${esc(t.id)}</text></g>`;});
+  if(opts.me&&G.pos&&dist(G.pos,pts[0])<20000)s+=`<circle cx="${X(G.pos)}" cy="${Y(G.pos)}" r="${Math.max(6,G.pos.acc/111320*sc)}" fill="rgba(40,120,255,.18)"/><circle cx="${X(G.pos)}" cy="${Y(G.pos)}" r="6" fill="#2878ff" stroke="#fff" stroke-width="2"/>`;
+  return s+'</svg>';
+}
+function vMap(){
+  startGPS();
+  $('#view').innerHTML=`<div class="card"><h2>Trap map</h2><div class="mute sm" style="margin-bottom:8px">Works offline (no background imagery). <span class="pill ok">serviced</span> <span class="pill warn">to do</span> <span class="pill" style="background:#2878ff;color:#fff">you</span> · tap a trap to locate it.</div><div id="mapbox">${mapSVG({me:true})}</div></div>`;
+  const bind=()=>document.querySelectorAll('#mapsvg g[data-id]').forEach(g=>g.onclick=()=>go('trap',g.dataset.id));bind();
+  let last=0;geoHook=c=>{if(c)return;if(Date.now()-last>4000){last=Date.now();$('#mapbox').innerHTML=mapSVG({me:true});bind();}};
+}
+
+/* ---------- Service wizard ---------- */
+let W=null;
+function newVisit(id){const d=today();const prev=lastVisitBefore(id,d);return{id:uid(),trap:String(id||''),round:curRound(),date:d,reset:d,days:prev?daysBetween(prev.reset||prev.date,d):'',triggers:'',rats:0,possums:0,cycles:'',dataSource:'app',battery:'',batteryPct:'',lure:'',eyes:'',led:'',ladder:'',countsReset:false,comments:'',photos:[],observer:S.settings.observer,gps:null};}
+const STEPS=['Trap','Safety','Data','Battery','Lure','Sensors','Check','Finish'];
+function vService(){
+  if(!W||(ARG&&W.v.trap!==String(ARG))){const ex=ARG?visitFor(ARG):null;W={step:ARG?1:0,v:ex?JSON.parse(JSON.stringify(ex)):newVisit(ARG),editing:!!ex};}
+  ARG=null;startGPS();const v=W.v,st=W.step;
+  const seg=(key,opts)=>`<div class="seg" data-k="${key}">${opts.map(([val,lab])=>`<button data-val="${val}" class="${v[key]===val?'on':''}">${lab}</button>`).join('')}</div>`;
+  const stepper=(key,lab)=>`<label>${lab}</label><div class="stepper"><button data-dec="${key}">−</button><input type="number" inputmode="numeric" min="0" id="f_${key}" value="${v[key]??''}"><button data-inc="${key}">+</button></div>`;
+  let body='';
+  if(st===0){
+    const near=G.pos?sortTraps(S.traps).filter(t=>t.lat!=null).sort((a,b)=>dist(G.pos,a)-dist(G.pos,b)).slice(0,4):[];
+    body=`<h2>Which trap?</h2>
+    ${near.length?`<label>Nearest to you</label><div class="seg">${near.map(t=>`<button data-pick="${esc(t.id)}">${esc(t.id)} · ${fmtDist(dist(G.pos,t))}</button>`).join('')}</div>`:`<div class="mute sm gpsmsg">${gpsWait('Waiting for GPS to suggest the nearest trap…')}</div>`}
+    <label>Or choose</label><select id="pickSel"><option value="">Select trap…</option>${sortTraps(S.traps).map(t=>`<option value="${esc(t.id)}" ${v.trap===t.id?'selected':''}>Trap ${esc(t.id)}${visitFor(t.id)?' (done)':''}</option>`).join('')}</select>`;
+  }else if(st===1){
+    body=`<h2>${md(SVC.safety_title)}</h2>${trapSVG('led')}
+    ${[].concat(SVC.safety_warning||[]).filter(Boolean).map(t=>`<div class="warnbox">${md(t)}</div>`).join('')}
+    <label>LED status on arrival</label>${seg('led',[['green','Green – OK'],['orange','Orange – clean eyes'],['red','Red – fault'],['none','No light']])}
+    <div class="btns"><button class="btn sm" onclick="go('guide','safety')">Safety guide</button><button class="btn sm" onclick="go('guide','led')">Button &amp; lights</button></div>`;
+  }else if(st===2){
+    body=`<h2>${md(SVC.data_title)}</h2>
+    <ol class="steps sm">${[].concat(SVC.data_step).map(t=>`<li>${md(t)}</li>`).join('')}</ol>
+    <label>How were counts obtained?</label>${seg('dataSource',[['app','NZAT app (WiFi)'],['manual','Manual count']])}
+    ${v.dataSource==='manual'?stepper('rats','Rats (counted)')+stepper('possums','Possums (counted)'):
+      stepper('triggers','Total triggers')+stepper('possums','Possums')+
+      `<div class="tip"><b>Rats = triggers − possums = ${(v.triggers===''||v.triggers==null)?'–':Math.max(0,(+v.triggers||0)-(+v.possums||0))}</b>${v.triggers!==''&&v.triggers!=null&&(+v.possums||0)>(+v.triggers||0)?'<br><span style="color:var(--bad)">Possums are more than total triggers – check the numbers.</span>':''}</div>`}
+    <label>Run time (days, as shown in the app)</label><input type="number" inputmode="numeric" id="f_days" value="${v.days}">
+    <label>Battery level from app % (optional)</label><input type="number" inputmode="numeric" id="f_batteryPct" value="${v.batteryPct}">
+    <div class="btns"><button class="btn sm" onclick="go('guide','data')">Full instructions</button>${GUIDES.find(g=>g.id==='nzat')?`<button class="btn sm" onclick="go('guide','nzat')">Using the NZAT app</button>`:''}${GUIDES.find(g=>g.id==='nzatscreens')?`<button class="btn sm" onclick="go('guide','nzatscreens')">NZAT app screens</button>`:''}</div>`;
+  }else if(st===3){
+    body=`<h2>${md(SVC.battery_title)}</h2>${trapSVG('battery')}${note('battery_note')}<label>Battery</label>${seg('battery',[['ok','OK – left in'],['replaced','Replaced with charged pack'],['low','Low – replace next time']])}
+    <div class="btns"><button class="btn sm" onclick="go('guide','battery')">How to replace</button></div>`;
+  }else if(st===4){
+    body=`<h2>${md(SVC.lure_title)}</h2>${trapSVG('lure')}${note('lure_note')}<label>Lure</label>${seg('lure',[['ok','OK'],['topped','Topped up'],['new','New pouch'],['tube','New tube / cap fitted'],['low','Needs new tube']])}
+    <div class="btns"><button class="btn sm" onclick="go('guide','lure')">How to top up</button></div>`;
+  }else if(st===5){
+    body=`<h2>${md(SVC.eyes_title)}</h2>${trapSVG('eyes')}${note('eyes_note')}<label>Sensor eyes / lights</label>${seg('eyes',[['clean','Clean – no action'],['cleaned','Cleaned'],['eye1','Eye 1 cleaned'],['eye2','Eye 2 cleaned'],['fault','Fault']])}
+    <div class="btns"><button class="btn sm" onclick="go('guide','eyes')">How to clean</button></div>`;
+  }else if(st===6){
+    body=`<h2>${md(SVC.check_title)}</h2>${trapSVG('ladder')}${note('check_note')}<label>Ladder, mesh, tags & mounting</label>${seg('ladder',[['ok','All OK'],['cleared','Debris cleared'],['tags','Tag(s) broken'],['repair','Needs repair']])}
+    <div class="btns"><button class="btn sm" onclick="go('guide','debris')">Checklist</button></div>`;
+  }else{
+    const prev=lastVisitBefore(v.trap,v.date,v.id);
+    body=`<h2>${md(SVC.finish_title)}</h2>${note('finish_note')}
+    <label class="row" style="color:var(--ink);font-size:15px"><input type="checkbox" id="f_countsReset" style="width:22px;height:22px" ${v.countsReset?'checked':''}> Counts re-set in NZAT app (step 5)</label>
+    <div class="row"><div class="grow"><label>Checked</label><input type="date" id="f_date" value="${v.date}"></div><div class="grow"><label>Re-set</label><input type="date" id="f_reset" value="${v.reset}"></div></div>
+    <label>No. days / run time ${prev?`<span class="mute">(last ${fmtD(prev.reset||prev.date)})</span>`:''}</label><input type="number" id="f_days" value="${v.days}">
+    <label>Comments</label><textarea id="f_comments" placeholder="e.g. new lure cap fitted, both tags broken">${esc(v.comments)}</textarea>
+    <label>Photos</label><div class="photos" id="ph"></div><button class="btn sm" id="addPh" style="margin-top:6px">+ Add photo</button>
+    <label>Serviced by <span class="mute">(required – your name)</span></label><input id="f_observer" value="${esc(v.observer)}" placeholder="Your name">
+    <div class="tip sm">Summary: Trap ${esc(v.trap)} · ${v.rats} rats · ${v.possums} possums · battery ${v.battery||'–'} · lure ${v.lure||'–'} · eyes ${v.eyes||'–'}</div>`;
+  }
+  $('#view').innerHTML=`<div class="card"><div class="row"><div class="grow"><b>${v.trap?'Trap '+esc(v.trap):'New service'}</b> <span class="mute sm">· ${STEPS[st]} (${st+1}/${STEPS.length})</span></div>${W.editing?'<span class="pill warn">editing</span>':''}</div>
+   <div class="prog">${STEPS.map((_,i)=>`<i class="${i<=st?'on':''}"></i>`).join('')}</div>${body}
+   <div class="btns" style="margin-top:16px">${st>0?'<button class="btn" id="back">‹ Back</button>':''}<div class="grow"></div>${st<STEPS.length-1?`<button class="btn pri" id="next">Next ›</button>`:'<button class="btn pri" id="saveV">Save service</button>'}</div>
+   ${st>0?'<button class="btn sm full" style="margin-top:10px" id="cancelV">Cancel</button>':''}</div>`;
+  const collect=()=>{['triggers','rats','possums','cycles','batteryPct','days'].forEach(k=>{const e=$('#f_'+k);if(e)v[k]=e.value===''?'':Math.max(0,+e.value);});
+    ['date','reset','comments','observer'].forEach(k=>{const e=$('#f_'+k);if(e)v[k]=e.value;});const c=$('#f_countsReset');if(c)v.countsReset=c.checked;
+    if(v.dataSource!=='manual'&&v.triggers!==''&&v.triggers!=null)v.rats=Math.max(0,(+v.triggers||0)-(+v.possums||0));};
+  document.querySelectorAll('.seg[data-k] button').forEach(b=>b.onclick=()=>{collect();const k=b.parentElement.dataset.k;v[k]=v[k]===b.dataset.val?'':b.dataset.val;vService();});
+  document.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>{collect();v[b.dataset.inc]=(+v[b.dataset.inc]||0)+1;vService();});
+  document.querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>{collect();v[b.dataset.dec]=Math.max(0,(+v[b.dataset.dec]||0)-1);vService();});
+  document.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>pick(b.dataset.pick));
+  const ps=$('#pickSel');if(ps)ps.onchange=()=>ps.value&&pick(ps.value);
+  function pick(id){const ex=visitFor(id);if(ex&&!confirm(`Trap ${id} already has a service this round. Edit it?`))return;W={step:1,v:ex?JSON.parse(JSON.stringify(ex)):newVisit(id),editing:!!ex};vService();}
+  const fd=$('#f_date');if(fd)fd.onchange=()=>{collect();const p=lastVisitBefore(v.trap,v.date,v.id);if(p)v.days=daysBetween(p.reset||p.date,v.date);if(!W.resetTouched)v.reset=v.date;vService();};
+  const fr=$('#f_reset');if(fr)fr.onchange=()=>{W.resetTouched=true;};
+  $('#back')&&($('#back').onclick=()=>{collect();W.step--;vService();});
+  $('#next')&&($('#next').onclick=()=>{collect();if(st===0&&!v.trap)return toast('Pick a trap first');W.step++;vService();});
+  $('#cancelV')&&($('#cancelV').onclick=()=>{if(confirm('Discard this service?')){W=null;go('traps');}});
+  if(st===7){
+    const draw=async()=>{const box=$('#ph');box.innerHTML='';for(const pid of v.photos){const d=await DB.get('photos',pid);if(d){const im=new Image();im.src=d;im.onclick=()=>{if(confirm('Remove this photo?')){v.photos=v.photos.filter(x=>x!==pid);draw();}};box.appendChild(im);}}};draw();
+    $('#addPh').onclick=()=>pickPhoto(async d=>{const pid='p'+uid();await DB.put('photos',pid,d);v.photos.push(pid);draw();});
+    $('#saveV').onclick=()=>{collect();if(!String(v.observer||'').trim()){toast('Type your name in "Serviced by" first');const o=$('#f_observer');if(o){o.focus();o.style.borderColor='var(--bad)';}return;}v.observer=String(v.observer).trim();v.updated=Date.now();if(G.pos)v.gps={lat:+G.pos.lat.toFixed(6),lng:+G.pos.lng.toFixed(6),acc:Math.round(G.pos.acc)};
+      if(v.observer)S.settings.observer=v.observer;
+      S.visits=S.visits.filter(x=>x.id!==v.id);S.visits.push(v);save();toast(`Trap ${v.trap} saved`);
+      const left=sortTraps(S.traps).filter(t=>!visitFor(t.id));W=null;
+      if(left.length&&G.pos){const n=left.filter(t=>t.lat!=null).sort((a,b)=>dist(G.pos,a)-dist(G.pos,b))[0];if(n&&confirm(`Saved. Navigate to nearest unserviced trap (${n.id}, ${fmtDist(dist(G.pos,n))})?`))return go('trap',n.id);}
+      go('traps');};
+  }
+}
+function pickPhoto(cb){const f=$('#fileIn');f.accept='image/*';f.setAttribute('capture','environment');f.value='';f.onchange=()=>{const file=f.files[0];if(!file)return;const img=new Image();const url=URL.createObjectURL(file);img.onload=()=>{const m=1280,s=Math.min(1,m/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);cb(c.toDataURL('image/jpeg',0.75));};img.src=url;};f.click();}
+
+/* ---------- Guides views ---------- */
+function vGuides(){
+  $('#view').innerHTML=`<div class="card"><h2>How-to guides</h2><div class="mute sm">AT220 servicing steps. Tap a guide, then add your own photos to each step so the team has real pictures from Uretara.</div></div>
+  ${TAG_KEY()}
+  <ul class="list">${GUIDES.map(g=>`<li class="item" onclick="go('guide','${g.id}')"><div class="num">${GUIDES.indexOf(g)+1}</div><div class="grow"><b>${esc(g.t)}</b><div class="mute sm">${g.steps.length} steps</div></div><span class="mute">›</span></li>`).join('')}</ul>
+  <div class="tip sm">Based on NZ Autotraps / project guidance for the AT220. Always follow the current AT220 user manual if anything differs. Diagrams, photos and NZAT app screenshots: NZ Autotraps AT220 User Manual (2025) and NZAT App Support guide v1.0.</div>`;
+}
+async function vGuide(){
+  const g=GUIDES.find(x=>x.id===ARG);if(!g)return go('guides');
+  $('#view').innerHTML=`<button class="btn sm" onclick="go('guides')">‹ Guides</button>
+  <div class="card" style="margin-top:10px"><h2>${esc(g.t)}</h2>${/\[(Trap|NZAT app|Phone settings|Guidance app)\]/i.test(JSON.stringify(g))?TAG_KEY():''}${trapSVG(g.hl)}${g.warn.map(w=>`<div class="warnbox">${md(w)}</div>`).join('')}
+  ${g.steps.map((s,i)=>`<div style="border-top:1px solid var(--line);padding:10px 0"><div class="row" style="align-items:flex-start"><div class="num" style="width:30px;height:30px;font-size:14px">${i+1}</div><div class="grow">${md(s.text)}${s.photo?`<img src="images/${encodeURIComponent(s.photo)}" alt="" style="display:block;width:100%;max-width:420px;border-radius:10px;border:1px solid var(--line);margin-top:8px" onerror="this.remove()">`:''}<div class="photos" id="gp${i}"></div><button class="btn sm" data-gadd="${i}" style="margin-top:6px">+ Photo</button></div></div></div>`).join('')}
+  ${g.tip.map(t=>`<div class="tip">${md(t)}</div>`).join('')}</div>`;
+  const draw=async i=>{const box=$('#gp'+i);if(!box)return;box.innerHTML='';for(const pid of (S.guidePhotos[g.id+'_'+i]||[])){const d=await DB.get('photos',pid);if(d){const im=new Image();im.src=d;im.onclick=()=>{if(confirm('Remove this photo?')){S.guidePhotos[g.id+'_'+i]=S.guidePhotos[g.id+'_'+i].filter(x=>x!==pid);save();draw(i);}};box.appendChild(im);}}};
+  g.steps.forEach((_,i)=>draw(i));
+  document.querySelectorAll('[data-gadd]').forEach(b=>b.onclick=()=>pickPhoto(async d=>{const i=b.dataset.gadd,pid='g'+uid();await DB.put('photos',pid,d);(S.guidePhotos[g.id+'_'+i]=S.guidePhotos[g.id+'_'+i]||[]).push(pid);save();draw(i);}));
+}
+
+/* ---------- Report ---------- */
+const LAB={battery:{ok:'',replaced:'battery replaced',low:'battery low'},lure:{ok:'',topped:'lure topped up',new:'new lure pouch',tube:'new tube/cap fitted',low:'needs new tube'},eyes:{clean:'',cleaned:'eyes cleaned',eye1:'eye 1 cleaned',eye2:'eye 2 cleaned',fault:'sensor fault'},ladder:{ok:'',cleared:'debris cleared',tags:'tag(s) broken',repair:'needs repair'},led:{green:'',orange:'LED orange',red:'LED red – fault',none:'no LED (flat battery?)'}};
+function autoComment(v){const parts=['led','battery','lure','eyes','ladder'].map(k=>LAB[k][v[k]]).filter(Boolean);if(v.dataSource==='manual')parts.push('manual count');if(v.comments)parts.push(v.comments);return parts.join('. ');}
+function reportData(r){
+  const vs=roundVisits(r);const rows=sortTraps(S.traps).map(t=>({t,v:vs.find(x=>x.trap===t.id)}));
+  const done=rows.filter(x=>x.v);const sum=k=>done.reduce((a,x)=>a+(+x.v[k]||0),0);
+  const days=sum('days'),rats=sum('rats'),pos=sum('possums');
+  const idx=r?rounds().indexOf(r):0;const all=rounds();
+  const prevR=[...new Set(S.visits.map(v=>v.round))].filter(x=>x!==r).map(x=>({x,d:S.visits.filter(v=>v.round===x).map(v=>v.date).sort().pop()})).filter(o=>o.d<(done.map(x=>x.v.date).sort()[0]||'9')).sort((a,b)=>b.d.localeCompare(a.d))[0];
+  let prev=null;if(prevR){const pv=S.visits.filter(v=>v.round===prevR.x);prev={round:prevR.x,n:pv.length,days:pv.reduce((a,v)=>a+(+v.days||0),0),rats:pv.reduce((a,v)=>a+(+v.rats||0),0),possums:pv.reduce((a,v)=>a+(+v.possums||0),0)};}
+  const dates=done.map(x=>x.v.date).sort();
+  return{r,rows,done,days,rats,pos,prev,dates,missing:rows.filter(x=>!x.v).map(x=>x.t.id)};
+}
+function vReport(){
+  const rs=rounds();const withData=rs.filter(r=>roundVisits(r).length);const sel=ARG||(roundVisits().length?curRound():(withData[withData.length-1]||curRound()));const D=reportData(sel);
+  const rate=(n,d)=>d?(n/d*100).toFixed(1):'–';
+  const top=D.done.slice().sort((a,b)=>(b.v.rats+b.v.possums)-(a.v.rats+a.v.possums)).slice(0,5);
+  const maint=D.done.filter(x=>autoComment(x.v));
+  const maxC=Math.max(1,...D.done.map(x=>+x.v.rats||0));
+  const repMap=mapSVG({round:sel,value:t=>{const v=D.done.find(x=>x.t.id===t.id)?.v;if(!v)return '#9aa39d';const f=(+v.rats||0)/maxC;return `rgb(${Math.round(240-f*150)},${Math.round(170-f*120)},${Math.round(60-f*30)})`;},radius:t=>{const v=D.done.find(x=>x.t.id===t.id)?.v;return v?8+Math.sqrt(+v.rats||0)*1.8:7;}});
+  $('#view').innerHTML=`
+  <div class="card noprint"><h2>Report</h2><label>Service round</label><select id="rsel">${rs.map(x=>`<option ${x===sel?'selected':''}>${esc(x)}</option>`).join('')}</select>
+   <div class="btns"><button class="btn pri" onclick="window.print()">Print / Save PDF</button><button class="btn" id="xl">Excel</button><button class="btn" id="csv">CSV</button></div></div>
+  ${roundCheck(D)}
+  <div id="reportOut" class="card">
+   <div style="border-bottom:3px solid var(--brand);padding-bottom:8px;margin-bottom:10px"><div class="mute sm">${esc(S.settings.site)} – NZ Autotraps AT220</div><h2 style="font-size:20px;margin:2px 0">${esc(sel)} service results</h2>
+   <div class="mute sm">${D.dates.length?`Serviced ${fmtD(D.dates[0])}${D.dates.length>1?' – '+fmtD(D.dates[D.dates.length-1]):''}`:'No services recorded'} · ${D.done.length} of ${D.rows.length} traps${(()=>{const o=[...new Set(D.done.map(x=>x.v.observer).filter(Boolean))];return o.length?' · '+esc(o.join(', ')):'';})()}</div></div>
+   <h3>Summary</h3>
+   <div class="kpis"><div class="kpi"><b>${D.rats}</b><span>rats (trap triggers)</span></div><div class="kpi"><b>${D.pos}</b><span>possums</span></div>
+   <div class="kpi"><b>${D.days.toLocaleString()}</b><span>trap-days since last service</span></div><div class="kpi"><b>${rate(D.rats,D.days)}</b><span>rats per 100 trap-days</span></div></div>
+   ${D.prev?`<p class="sm">Previous round (${esc(D.prev.round)}): ${D.prev.rats} rats, ${D.prev.possums} possums over ${D.prev.days.toLocaleString()} trap-days (${rate(D.prev.rats,D.prev.days)} rats / 100 trap-days) from ${D.prev.n} traps.</p>`:''}
+   ${top.length?`<p class="sm"><b>Highest catches:</b> ${top.map(x=>`trap ${esc(x.t.id)} (${x.v.rats} rats${x.v.possums?`, ${x.v.possums} possum${x.v.possums>1?'s':''}`:''})`).join('; ')}.</p>`:''}
+   ${D.missing.length&&D.done.length?`<p class="sm"><b>Not serviced this round:</b> ${D.missing.join(', ')}.</p>`:''}
+   <h3>Results by trap</h3>
+   <div class="tbl"><table><tr><th>trap #</th><th>Lat</th><th>Long</th><th>checked</th><th class="c">No.days</th><th class="c">fired rats</th><th class="c">possum</th><th>re-set</th><th>comments</th></tr>
+   ${D.rows.map(({t,v})=>`<tr><td class="c">${esc(t.id)}</td><td>${t.lat!=null?t.lat.toFixed(6):''}</td><td>${t.lng!=null?t.lng.toFixed(6):''}</td><td>${v?fmtD(v.date):''}</td><td class="c">${v?v.days:''}</td><td class="c">${v?v.rats:''}</td><td class="c">${v?v.possums:''}</td><td>${v?fmtD(v.reset):''}</td><td style="white-space:normal;min-width:140px">${v?esc(autoComment(v)):''}</td></tr>`).join('')}
+   <tr><th colspan="4" style="text-align:right">Totals</th><th class="c">${D.days}</th><th class="c">${D.rats}</th><th class="c">${D.pos}</th><th colspan="2"></th></tr></table></div>
+   <h3>Catch map</h3><div class="mute sm">Circle size and colour scale with rats caught this round; grey = not serviced.</div>${repMap}
+   ${maint.length?`<h3>Maintenance & issues</h3><ul class="sm">${maint.map(x=>`<li>Trap ${esc(x.t.id)}: ${esc(autoComment(x.v))}</li>`).join('')}</ul>`:''}
+   <p class="mute sm" style="margin-top:14px">Counts are trap trigger counts read from the AT220 (NZAT app) unless noted as manual. No.days = days since the previous service/re-set.</p>
+  </div>
+  <div class="card noprint"><h2>Data</h2><div class="btns">
+   <button class="btn pri sm" onclick="pickFiles('.json,application/json',mergeFiles)">Merge round files…</button><button class="btn sm" onclick="sendRound('${esc(sel)}')">Send my round</button><button class="btn sm" onclick="go('settings')">Settings & import</button><button class="btn sm" id="bk">Backup (JSON)</button></div>
+   <div class="mute sm" style="margin-top:6px">Combine everyone's data here before publishing – see the guide <a href="#" onclick="go('guide','share');return false">Sending data &amp; making the report</a>.</div></div>`;
+  $('#rsel').onchange=e=>go('report',e.target.value);
+  $('#csv').onclick=()=>dl(`${S.settings.site} ${sel} AT220 results.csv`,toAOA(D).map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');
+  $('#xl').onclick=()=>{if(!window.XLSX)return toast('Excel library not loaded');const aoa=toAOA(D).map((r,i)=>i>2?r.map((c,j)=>(j===3||j===7)&&c?new Date(c+'T00:00'):c):r);const ws=XLSX.utils.aoa_to_sheet(aoa,{cellDates:true,dateNF:'d/mm/yyyy'});ws['!cols']=[{wch:7},{wch:12},{wch:12},{wch:11},{wch:8},{wch:10},{wch:8},{wch:11},{wch:40}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Sheet1');XLSX.writeFile(wb,`${sel} AT 220 TRAP SERVICE RESULTS.xlsx`);};
+  $('#bk').onclick=backup;
+}
+function toAOA(D){const out=[[`${D.r} service results:`],[`${(S.settings.site||'').toUpperCase()} AT220 traps`],['trap #','Lat','Long','checked','No.days','fired rats','possum','re-set','comments']];
+  D.rows.forEach(({t,v})=>out.push([isNaN(+t.id)?t.id:+t.id,t.lat,t.lng,v?v.date:'',v?v.days:'',v?v.rats:'',v?v.possums:'',v?v.reset:'',v?autoComment(v):'']));
+  out.push([]);out.push(['','','','',D.days,D.rats,D.pos]);out.push(['','','','','days','rats','possums']);return out;}
+function dl(name,data,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);}
+async function backup(){const photos=await DB.all('photos');dl(`AT220 backup ${today()}.json`,JSON.stringify({app:'at220',v:1,traps:S.traps,visits:S.visits,settings:S.settings,guidePhotos:S.guidePhotos,photos}),'application/json');}
+
+/* ---------- Settings & import ---------- */
+function vSettings(){
+  $('#view').innerHTML=`<div class="card"><h2>Round & settings</h2>
+   <label>Current service round</label><input id="s_round" value="${esc(curRound())}" list="rl"><datalist id="rl">${rounds().map(r=>`<option>${esc(r)}</option>`).join('')}<option>${monthRound()}</option></datalist>
+   <div class="mute sm">New services are saved to this round. Start a new round each servicing trip (e.g. "January 2027").</div>
+   <label>Site name</label><input id="s_site" value="${esc(S.settings.site)}">
+   <label>Your name (serviced by)</label><input id="s_obs" value="${esc(S.settings.observer)}">
+   <div class="btns"><button class="btn pri" id="s_save">Save</button></div></div>
+  <div class="card"><h2>Import trap list</h2><div class="mute sm">Load the updated trap spreadsheet (.xlsx or .csv). Needs a header row with <b>trap #</b>, <b>Lat</b>, <b>Long</b>. Any column named like <i>location, notes, comments, access, directions</i> is loaded as the location notes. Existing service history is kept.</div>
+   <div class="btns"><button class="btn" id="imp">Choose spreadsheet…</button></div><div id="impOut" class="sm"></div></div>
+  <div class="card"><h2>Guide & form text</h2><div class="mute sm">Wording comes from <b>app-text.xlsx</b> in the app folder. Currently using: <b>${esc(TEXT_SRC)}</b>. If the app is opened as a file, load the spreadsheet here instead.</div>
+   <div class="btns"><button class="btn" id="impText">Load app-text.xlsx…</button>${TEXT_SRC.startsWith('imported')?'<button class="btn" id="clrText">Clear loaded text</button>':''}</div></div>
+  <div class="card"><h2>Share data with the team</h2><div class="mute sm">Each person taps <b>Send my round</b> and sends the file to the coordinator. The coordinator taps <b>Merge round files</b> to combine them – nothing is overwritten.</div>
+   <div class="btns"><button class="btn" onclick="sendRound()">Send my round</button><button class="btn" onclick="pickFiles('.json,application/json',mergeFiles)">Merge round files…</button></div></div>
+  <div class="card"><h2>Full backup & restore</h2><div class="mute sm">Data is stored on this phone only. Back up after each round and before clearing the browser. <b>Restore replaces everything on this phone</b> – to combine several people's data use Merge round files instead.</div>
+   <div class="btns"><button class="btn" onclick="backup()">Download backup</button><button class="btn" id="rest">Restore backup…</button></div></div>
+  <div class="card"><h2>Install for offline use</h2><ol class="steps sm"><li>Open this app's web address once while online.</li><li>iPhone: Share › <b>Add to Home Screen</b>. Android (Chrome): menu ⋮ › <b>Install app</b>.</li><li>Open it from the home-screen icon – it then works with no signal.</li><li>Also install the <b>NZAT app</b> and log in before going to the island.</li></ol>
+   <div class="mute sm">${'serviceWorker' in navigator&&navigator.serviceWorker.controller?'✓ Offline cache active':'Offline cache not active yet (needs to be served over https).'}</div></div>`;
+  $('#s_save').onclick=()=>{S.settings.round=$('#s_round').value.trim();S.settings.site=$('#s_site').value.trim();S.settings.observer=$('#s_obs').value.trim();save();toast('Saved');go('traps');};
+  $('#imp').onclick=()=>pickFile('.xlsx,.xls,.csv',importTraps);
+  $('#rest').onclick=()=>pickFile('.json',restore);
+  $('#impText').onclick=()=>pickFile('.xlsx',importAppText);
+  $('#clrText')&&($('#clrText').onclick=async()=>{await DB.put('kv','appText',null);location.reload();});
+}
+function pickFile(accept,cb){const f=$('#fileIn');f.accept=accept;f.removeAttribute('capture');f.value='';f.onchange=()=>f.files[0]&&cb(f.files[0]);f.click();}
+function parseCoord(v){if(v==null||v==='')return null;const n=parseFloat(String(v).replace(/[°\s]/g,''));return isNaN(n)?null:n;}
+async function importTraps(file){
+  if(!window.XLSX)return toast('Spreadsheet library not loaded');
+  const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  const hi=rows.findIndex(r=>r.some(c=>/trap/i.test(c))&&r.some(c=>/^lat/i.test(String(c).trim())));
+  if(hi<0)return $('#impOut').innerHTML='<p class="pill bad">Could not find a header row with "trap" and "Lat" columns.</p>';
+  const h=rows[hi].map(c=>String(c).trim().toLowerCase());
+  const ci=re=>h.findIndex(c=>re.test(c));const cT=ci(/trap/),cLa=ci(/^lat/),cLo=ci(/^lon|^lng/);
+  const noteCols=h.map((c,i)=>/location|note|comment|access|direction|descr|find|where/.test(c)&&i!==cT?i:-1).filter(i=>i>=0);
+  let added=0,updated=0,warn=[];
+  for(const r of rows.slice(hi+1)){const id=String(r[cT]).trim();if(!id||!/\d/.test(id))continue;
+    let la=parseCoord(r[cLa]),lo=parseCoord(r[cLo]);if(la!=null&&la>0){la=-la;warn.push(`trap ${id}: latitude was positive – made negative`);}
+    let t=trapById(id);
+    if(la!=null&&lo!=null&&S.traps.length){const c=S.traps.filter(x=>x.lat!=null);const cx={lat:c.reduce((a,x)=>a+x.lat,0)/c.length,lng:c.reduce((a,x)=>a+x.lng,0)/c.length};const d=dist(cx,{lat:la,lng:lo});if(d>2500){warn.push(`trap ${id}: ${fmtDist(d)} from the other traps – coordinates NOT imported, check spreadsheet`);la=lo=null;}}
+    const notes=noteCols.map(i=>String(r[i]).trim()).filter(Boolean).join(' · ');
+    if(!t){t={id,lat:la,lng:lo,notes,src:'import'};S.traps.push(t);added++;}
+    else{if(la!=null&&lo!=null){t.lat=+la.toFixed(6);t.lng=+lo.toFixed(6);t.src='import';}if(notes)t.notes=notes;updated++;}}
+  save();$('#impOut').innerHTML=`<p><span class="pill ok">Imported</span> ${updated} traps updated, ${added} added${noteCols.length?` · notes from: ${noteCols.map(i=>esc(rows[hi][i])).join(', ')}`:' · no notes column found'}.</p>${warn.length?`<ul>${warn.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:''}`;
+}
+async function restore(file){try{const d=JSON.parse(await file.text());if(d.app!=='at220')throw 0;if(!confirm('Replace all data on this phone with the backup?'))return;
+  S.traps=d.traps;S.visits=d.visits;S.settings=d.settings;S.guidePhotos=d.guidePhotos||{};for(const[k,v]of Object.entries(d.photos||{}))await DB.put('photos',k,v);save();toast('Backup restored');go('traps');}catch(e){toast('Not a valid AT220 backup file');}}
+
+function markSent(r){S.settings.sent={...(S.settings.sent||{}),[r]:Date.now()};save();}
+function endRoundCard(){
+  const r=curRound(),vs=roundVisits(r),sent=(S.settings.sent||{})[r];
+  const changed=sent?vs.filter(v=>(v.updated||0)>sent).length:0;
+  const st=!sent?`<span class="pill warn">Not sent yet</span>`:changed?`<span class="pill warn">${changed} service(s) changed since you sent – send again</span>`:`<span class="pill ok">Sent ${new Date(sent).toLocaleString('en-NZ',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})}</span>`;
+  return `<div class="card"><h2>Finished for the day / end of round?</h2><div style="margin-bottom:6px">${st}</div>
+   <ol class="steps sm"><li>Check your traps show <b>done</b> below and the counts look right (tap a trap to fix).</li><li>Back in coverage, tap <b>Send my round</b> and send the file to the coordinator.</li><li>Put used batteries on charge and tell the coordinator about anything needing repair.</li><li>Keep the data on this phone until the coordinator says the report is done.</li></ol>
+   <div class="btns"><button class="btn pri sm" onclick="sendRound()">Send my round</button><button class="btn sm" onclick="go('guide','endround')">Full end-of-round checklist</button></div></div>`;
+}
+
+/* ---------- Team data: send & merge ---------- */
+function pickFiles(accept,cb){const f=$('#fileIn');f.accept=accept;f.removeAttribute('capture');f.multiple=true;f.value='';f.onchange=()=>{const fs=[...f.files];f.multiple=false;if(fs.length)cb(fs);};f.click();}
+async function sendRound(r){
+  r=r||curRound();const vs=S.visits.filter(v=>v.round===r);
+  if(!vs.length)return toast('No services saved for '+r+' on this phone');
+  const who=String(S.settings.observer||vs.find(v=>v.observer)?.observer||'unknown').trim();
+  const n=vs.reduce((a,v)=>a+(v.photos||[]).length,0);const photos={};
+  if(n&&confirm(`Include ${n} photo(s)?\n\nOK = include photos (bigger file – may be too big for WhatsApp)\nCancel = data only`)){for(const v of vs)for(const p of v.photos||[]){const d=await DB.get('photos',p);if(d)photos[p]=d;}}
+  const data=JSON.stringify({app:'at220',kind:'round',v:1,round:r,from:who,sent:new Date().toISOString(),visits:vs,photos});
+  const name=`AT220 ${r} - ${who} - ${today()}.json`.replace(/[\\/:*?"<>|]/g,'-');
+  try{const file=new File([data],name,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})&&/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){await navigator.share({files:[file],title:name,text:`AT220 ${r} service data from ${who} – ${vs.length} trap(s)`});markSent(r);toast('Round file sent');return;}
+  }catch(e){if(e&&e.name==='AbortError')return;}
+  dl(name,data,'application/json');markSent(r);toast('Round file saved to Downloads');
+}
+const MKEYS=['trap','round','date','reset','days','triggers','rats','possums','cycles','dataSource','battery','batteryPct','lure','eyes','led','ladder','countsReset','comments','observer'];
+const sameVisit=(a,b)=>MKEYS.every(k=>String(a[k]??'')===String(b[k]??''))&&String((a.photos||[]).join())===String((b.photos||[]).join());
+async function mergeFiles(files){
+  S.clashes=S.clashes||[];const res={files:0,added:0,same:0,updated:0,clash:0,bad:[],rounds:{},from:[]};
+  for(const f of files){let d;try{d=JSON.parse(await f.text());}catch(e){res.bad.push(f.name);continue;}
+    if(!d||d.app!=='at220'||!Array.isArray(d.visits)){res.bad.push(f.name);continue;}
+    res.files++;if(d.from)res.from.push(d.from);
+    for(const[k,val]of Object.entries(d.photos||{}))if(!(await DB.get('photos',k)))await DB.put('photos',k,val);
+    for(const nv of d.visits){if(!nv||!nv.id||nv.trap==null)continue;nv.trap=String(nv.trap);
+      const ex=S.visits.find(x=>x.id===nv.id);
+      if(ex){if(sameVisit(ex,nv)||(ex.updated||0)>(nv.updated||0)){res.same++;continue;}
+        if((nv.updated||0)>(ex.updated||0)){S.visits=S.visits.map(x=>x.id===nv.id?nv:x);res.updated++;continue;}
+        if(!S.clashes.some(c=>c.b.id===nv.id&&sameVisit(c.b,nv))){S.clashes.push({a:ex.id,b:nv});res.clash++;}else res.same++;continue;}
+      if(S.clashes.some(c=>c.b.id===nv.id)){res.same++;continue;}
+      const other=S.visits.find(x=>x.round===nv.round&&x.trap===nv.trap);
+      if(other){S.clashes.push({a:other.id,b:nv});res.clash++;continue;}
+      S.visits.push(nv);res.added++;res.rounds[nv.round]=(res.rounds[nv.round]||0)+1;}}
+  save();go('merge',res);
+}
+function clashTable(a,b){
+  const L={battery:'Battery',lure:'Lure',eyes:'Sensor lights',led:'Light on arrival',ladder:'Ladder/tags'};
+  const rows=[['Serviced by','observer'],['Checked','date'],['Run time (days)','days'],['Triggers','triggers'],['Rats','rats'],['Possums','possums'],['Counts from','dataSource'],...Object.entries(L).map(([k,l])=>[l,k]),['Comments','comments']];
+  const cell=(v,k)=>k==='date'?fmtD(v[k]):esc(v[k]??'');
+  return `<table class="sm" style="width:100%;border-collapse:collapse"><tr><th></th><th>A – on this phone</th><th>B – from file</th></tr>${rows.map(([l,k])=>{const d=String(a[k]??'')!==String(b[k]??'');return `<tr${d?' style="background:rgba(224,72,47,.10)"':''}><td class="mute">${l}</td><td>${cell(a,k)}</td><td>${cell(b,k)}</td></tr>`;}).join('')}<tr><td class="mute">Photos</td><td>${(a.photos||[]).length}</td><td>${(b.photos||[]).length}</td></tr></table>`;
+}
+function vMerge(){
+  const res=ARG;S.clashes=(S.clashes||[]).filter(c=>{if(!S.visits.some(x=>x.id===c.a)){S.visits.push(c.b);return false;}return true;});save();
+  const cl=S.clashes;
+  $('#view').innerHTML=`${res?`<div class="card"><h2>Merge result</h2>
+    <ul class="sm"><li><b>${res.files}</b> file(s) read${res.from.length?' – from '+esc([...new Set(res.from)].join(', ')):''}</li>
+    <li><b>${res.added}</b> new trap service(s) added${Object.keys(res.rounds).length?' ('+Object.entries(res.rounds).map(([r,n])=>esc(r)+': '+n).join(', ')+')':''}</li>
+    ${res.updated?`<li><b>${res.updated}</b> updated with a newer edit</li>`:''}
+    <li><b>${res.same}</b> already on this phone – skipped</li>
+    ${res.clash?`<li style="color:var(--bad)"><b>${res.clash}</b> clash(es) – see below</li>`:''}
+    ${res.bad.length?`<li style="color:var(--bad)">Not an AT220 data file: ${esc(res.bad.join(', '))}</li>`:''}</ul>
+    ${Object.keys(res.rounds).some(r=>r!==curRound())?`<div class="tip sm">Some records are for a different round name than this phone's current round (<b>${esc(curRound())}</b>). If that's a typo (e.g. "Nov 2026" vs "November 2026"), ask the sender to fix the round name, re-save and resend.</div>`:''}</div>`:''}
+  <div class="card"><h2>Clashes to resolve (${cl.length})</h2>
+   ${cl.length?`<div class="mute sm">The same trap was recorded twice in the same round. Differences are highlighted. Tap <b>Keep</b> on the correct record – the other is removed.</div>`+cl.map((c,i)=>{const a=S.visits.find(x=>x.id===c.a);return `<div style="border-top:1px solid var(--line);padding:10px 0;margin-top:8px"><b>Trap ${esc(c.b.trap)}</b> · ${esc(c.b.round)}${clashTable(a,c.b)}<div class="btns"><button class="btn sm" data-keep="${i}:a">Keep A (${esc(a.observer||'?')})</button><button class="btn sm" data-keep="${i}:b">Keep B (${esc(c.b.observer||'?')})</button></div></div>`;}).join(''):'<div class="mute sm">None – all data combined.</div>'}
+  </div>
+  <div class="btns"><button class="btn pri" onclick="go('report')">Go to report</button><button class="btn" onclick="pickFiles('.json,application/json',mergeFiles)">Merge more files…</button></div>`;
+  document.querySelectorAll('[data-keep]').forEach(b=>b.onclick=()=>{const[i,w]=b.dataset.keep.split(':');const c=S.clashes[+i];
+    if(w==='b'){S.visits=S.visits.filter(x=>x.id!==c.a);S.visits.push(c.b);}
+    S.clashes.splice(+i,1);save();toast('Kept '+w.toUpperCase());ARG=null;vMerge();});
+}
+function roundCheck(D){
+  const cl=(S.clashes||[]).filter(c=>c.b.round===D.r).length;const by={};D.done.forEach(x=>{const o=x.v.observer||'(no name)';by[o]=(by[o]||0)+1;});
+  const ok=!D.missing.length&&!cl;
+  return `<div class="card noprint"><h2>Round check ${ok?'<span class="pill ok">Ready to publish</span>':'<span class="pill warn">Not complete</span>'}</h2>
+   <ul class="sm"><li><b>${D.done.length} of ${D.rows.length}</b> traps serviced</li>
+   ${D.missing.length?`<li>Not yet in this phone: trap${D.missing.length>1?'s':''} <b>${D.missing.map(esc).join(', ')}</b> – merge the missing round files, or they weren't serviced</li>`:''}
+   ${cl?`<li style="color:var(--bad)"><b>${cl}</b> clash(es) to resolve – <a href="#" onclick="go('merge');return false">resolve now</a></li>`:''}
+   <li>Serviced by: ${Object.entries(by).map(([o,n])=>esc(o)+' ('+n+')').join(', ')||'–'}</li></ul></div>`;
+}
+
+/* ---------- Boot ---------- */
+(async()=>{
+  await DB.open();const st=await DB.get('kv','state');
+  if(st&&st.traps){S={...S,...st};}
+  else{S.traps=SEED.traps;S.visits=SEED.history.map(h=>({id:'oct26_'+h.trap,round:'October 2026',dataSource:'app',observer:'',photos:[],battery:'',lure:'',eyes:'',led:'',ladder:'',countsReset:true,...h}));S.settings.round='';save();}
+  await loadAppText();
+  go('traps');
+  if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
